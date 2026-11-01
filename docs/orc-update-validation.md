@@ -23,4 +23,8 @@ Final automated checks:
 
 Local deliverable: `artifacts/Wilderguard-beta-0.1.0-beta.2.apk`, package `com.wilderguard.game.beta`, versionCode 2. APK SHA-256: `8168b78ecfecb76248ef3b4b6bfcc1c6948dc28f52b1ad44d9b7724612985d4d`. Updated source reference: `artifacts/reference-orcs-0.1.0-beta.2.tar.gz`; provenance: `artifacts/beta-orcs-source-manifest.json`.
 
-The prepared update is not published: the live F-Droid feed still serves beta 1 and its distribution checkout is clean at `24ae071b9c8333b9372728bbd8a716496d755a45`. No physical Tab S4 test or actual F-Droid client update is claimed. Balance is proven against a deterministic strategy; Eric's play feedback is still the best check of how the harder game feels.
+At completion of the artwork update, beta 2 was prepared locally and the live feed still served beta 1 at distribution commit `24ae071b9c8333b9372728bbd8a716496d755a45`. No physical Tab S4 test or actual F-Droid client update is claimed. Balance is proven against a deterministic strategy; Eric's play feedback is still the best check of how the harder game feels.
+
+## Publication follow-up — 1 November 2026
+
+Beta 2 is now published at https://sivivatu.github.io/wilderguard-beta/ with its direct signed APK at https://sivivatu.github.io/wilderguard-beta/fdroid/repo/com.wilderguard.game.beta_2.apk. Distribution commit: `8790e0eb6de7808836cd48301c3b88e2f4ca2e51`, tagged `v0.1.0-beta.2`. The source repository remains local. The metadata recommendation was corrected from version 1 to version 2 and the signed feed regenerated without changing either APK. Both signed index formats and APK signing continuity were revalidated before publication; public HTTPS bytes were checked against the immutable release hashes. This does not establish a physical-device or F-Droid client update test.

@@ -6,17 +6,17 @@ A pixel-art tower-defense adventure through Elderglen: five places to free, five
 
 ## Unlisted Android beta
 
-Wilderguard Beta (`com.wilderguard.game.beta`, version `0.1.0-beta.1`) is published in a small, unlisted F-Droid repository. It is separate from the original Android preview and does not import saved progress. It installs side-by-side with that preview. This is a developer-run repository, **not an app in F-Droid’s official catalog**. Anyone who has the public link can access its downloads; “unlisted” does not provide privacy or access control.
+Wilderguard Beta (`com.wilderguard.game.beta`, version `0.1.0-beta.2`) is published in a small, unlisted F-Droid repository. It is separate from the original Android preview and does not import saved progress. It installs side-by-side with that preview. This is a developer-run repository, **not an app in F-Droid’s official catalog**. Anyone who has the public link can access its downloads; “unlisted” does not provide privacy or access control.
 
-**The public page, signed feed, and APK were verified live on 31 October 2026.** Install it on the tablet as follows:
+**The public page, signed feed, and APK were verified live on 1 November 2026.** Install it on the tablet as follows:
 
 1. [Install F-Droid](https://f-droid.org/F-Droid.apk) if it isn’t already on the device.
 2. Open the [Wilderguard Beta install page](https://sivivatu.github.io/wilderguard-beta/) on the tablet and tap **Add beta to F-Droid**. Confirm adding the repository in F-Droid.
 3. Find **Wilderguard Beta** in F-Droid and tap **Install**. Allow F-Droid to install apps if Android asks.
 
-Alternatively, download the [signed beta APK](https://sivivatu.github.io/wilderguard-beta/fdroid/repo/com.wilderguard.game.beta_1.apk) directly. The install page includes the signing details. The app targets Android API 34, supports API 22 and newer with a modern WebView, and opens in landscape. Physical Tab S4 testing is pending. See [F-Droid beta notes](fdroid/README.md) for publisher and repository details.
+Alternatively, download the [signed beta APK](https://sivivatu.github.io/wilderguard-beta/fdroid/repo/com.wilderguard.game.beta_2.apk) directly. The install page includes the signing details. The app targets Android API 34, supports API 22 and newer with a modern WebView, and opens in landscape. Physical Tab S4 testing is pending. See [F-Droid beta notes](fdroid/README.md) for publisher and repository details.
 
-The live feed currently contains beta `0.1.0-beta.1`. The updated game, with the selected orcs and stronger waves, is available as the [signed local beta 2 APK](artifacts/Wilderguard-beta-0.1.0-beta.2.apk), version `0.1.0-beta.2` (versionCode 2). It uses the same beta signing identity and can update beta 1 while retaining its checkpoint saves. It is not in the feed yet.
+The live feed now recommends beta `0.1.0-beta.2` (versionCode 2), with the approved Sunburst orcs and stronger waves. Refresh the repository in F-Droid to update, or use the direct signed APK link above. Beta 2 keeps the same signing identity as beta 1, so an in-place update preserves its local checkpoint saves. Beta 1 remains available in the feed.
 
 ## Play
 
@@ -79,6 +79,6 @@ See [NOTES.md](NOTES.md) for Eric’s original idea and the work still needed be
 
 ## Local version control
 
-The complete project is tracked in a local Git repository on `main`. The initial source checkpoint is tagged `v0.1.0-beta.2`; it represents the signed local beta 2 build, not a published release. No remote is configured and nothing has been pushed.
+The complete project is tracked in a local Git repository on `main`. The initial source checkpoint is tagged `v0.1.0-beta.2`. The source repository has no remote and has not been pushed. Android install material is published separately through the existing F-Droid distribution repository.
 
 Source code, Android build files, tests, documentation, fonts, and the generated artwork concepts are included. Dependencies, generated builds, APKs, reference archives, local configuration, and signing material are ignored. Existing local artifacts remain in `artifacts/`, including the separate F-Droid distribution checkout. Signing-key custody and recovery are documented in the beta publishing runbook; keys are not part of this repository.
