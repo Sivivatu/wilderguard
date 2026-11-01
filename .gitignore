@@ -1,0 +1,32 @@
+node_modules/
+dist/
+coverage/
+playwright-report/
+test-results/
+android/.gradle/
+android/local.properties
+android/**/build/
+*.jks
+*.keystore
+.DS_Store
+
+# Local APKs, reference archives, signing state, and distribution checkout
+artifacts/
+
+# Beta publication state and secret-bearing local configuration
+fdroid/config.yml
+fdroid/keystore*
+fdroid/*.jks
+**/__pycache__/
+.infisical.json
+.infisical.yaml
+
+# Local credentials and editor state
+.env
+.env.*
+!.env.example
+!.env.template
+*.p12
+*.pfx
+.idea/
+.vscode/

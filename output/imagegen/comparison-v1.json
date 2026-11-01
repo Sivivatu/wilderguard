@@ -1,0 +1,122 @@
+{
+  "generated_at_utc": "2026-11-01T10:21:56.217404+00:00",
+  "use_case": "stylized-concept",
+  "endpoint": "https://openrouter.ai/api/v1/images",
+  "prompt": "Use case: stylized-concept.\nAsset type: approval concept board for enemies in a tablet tower defense game.\nPrimary request: Three orc enemies with clubs and axes, in a pixelated photographic style. Full-body lineup on a simple neutral gray background, well separated and entirely in frame. From left to right: a basic stocky green orc holding a heavy wooden club; a stronger muscular orc holding a clearly recognizable iron axe; a larger armored orc captain holding a large iron axe. Each has a solid humanoid body, legs, pointed ears, visible tusks, and distinct equipment. All three viewed from a consistent slightly elevated three-quarter game camera.\nStyle/medium: detailed realistic light and material textures translated into crisp, visibly square pixel art, like a photographed miniature rendered at low resolution and enlarged with nearest-neighbor pixels. Strong readable silhouettes, chunky pixel edges, restrained shading clusters, textured leather, wood grain, scuffed iron, green skin. Clearly pixelated across the entire image, including the faces and weapons. No smooth vector look or soft airbrushed illustration.\nLighting/mood: natural directional light with readable shadows; adventurous and child-friendly rather than horror.\nConstraints: three characters total; weapons unobstructed; no blood, gore, injuries, slime, blobs, UI, written labels, watermark, or text. Flat neutral backdrop; no scenery. All figures fully visible with generous separation and margins. Landscape composition.",
+  "generation_parameters": {
+    "aspect_ratio": "3:2",
+    "quality": "medium",
+    "n": 1,
+    "output_format": "png"
+  },
+  "results": [
+    {
+      "model": "openai/gpt-image-2",
+      "request": {
+        "aspect_ratio": "3:2",
+        "quality": "medium",
+        "n": 1,
+        "output_format": "png"
+      },
+      "http_status": 200,
+      "status": "ok",
+      "output_path": "/home/ubuntu/code/erics-game/output/imagegen/orc-compare-gpt-image-2-v1.png",
+      "png_valid": true,
+      "width": 1536,
+      "height": 1024,
+      "size_bytes": 1621972,
+      "usage": {
+        "prompt_tokens": 297,
+        "completion_tokens": 1372,
+        "total_tokens": 1669,
+        "cost": 0.042645,
+        "is_byok": false,
+        "prompt_tokens_details": {
+          "cached_tokens": 0
+        },
+        "cost_details": {
+          "upstream_inference_cost": 0.042645,
+          "upstream_inference_prompt_cost": 0.001485,
+          "upstream_inference_completions_cost": 0.04116
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 0,
+          "image_tokens": 1372
+        }
+      },
+      "error": null
+    },
+    {
+      "model": "openai/gpt-image-2.5-sunburst",
+      "request": {
+        "aspect_ratio": "3:2",
+        "quality": "medium",
+        "n": 1,
+        "output_format": "png"
+      },
+      "http_status": 200,
+      "status": "ok",
+      "output_path": "/home/ubuntu/code/erics-game/output/imagegen/orc-compare-sunburst-v1.png",
+      "png_valid": true,
+      "width": 1536,
+      "height": 1024,
+      "size_bytes": 1646161,
+      "usage": {
+        "prompt_tokens": 297,
+        "completion_tokens": 343,
+        "total_tokens": 640,
+        "cost": 0.011775,
+        "is_byok": false,
+        "prompt_tokens_details": {
+          "cached_tokens": 0
+        },
+        "cost_details": {
+          "upstream_inference_cost": 0.011775,
+          "upstream_inference_prompt_cost": 0.001485,
+          "upstream_inference_completions_cost": 0.01029
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 0,
+          "image_tokens": 343
+        }
+      },
+      "error": null
+    },
+    {
+      "model": "openai/gpt-image-2.5-flare",
+      "request": {
+        "aspect_ratio": "3:2",
+        "quality": "medium",
+        "n": 1,
+        "output_format": "png"
+      },
+      "http_status": 200,
+      "status": "ok",
+      "output_path": "/home/ubuntu/code/erics-game/output/imagegen/orc-compare-flare-v1.png",
+      "png_valid": true,
+      "width": 1536,
+      "height": 1024,
+      "size_bytes": 1717313,
+      "usage": {
+        "prompt_tokens": 297,
+        "completion_tokens": 343,
+        "total_tokens": 640,
+        "cost": 0.011775,
+        "is_byok": false,
+        "prompt_tokens_details": {
+          "cached_tokens": 0
+        },
+        "cost_details": {
+          "upstream_inference_cost": 0.011775,
+          "upstream_inference_prompt_cost": 0.001485,
+          "upstream_inference_completions_cost": 0.01029
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 0,
+          "image_tokens": 343
+        }
+      },
+      "error": null
+    }
+  ]
+}

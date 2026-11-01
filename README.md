@@ -1,0 +1,84 @@
+# Wilderguard
+
+**Made by Eric, a 7-year-old boy.**
+
+A pixel-art tower-defense adventure through Elderglen: five places to free, five waves in each, and a little kingdom worth protecting. Build your defenses, hold back waves of orcs, and bring the country home.
+
+## Unlisted Android beta
+
+Wilderguard Beta (`com.wilderguard.game.beta`, version `0.1.0-beta.1`) is published in a small, unlisted F-Droid repository. It is separate from the original Android preview and does not import saved progress. It installs side-by-side with that preview. This is a developer-run repository, **not an app in F-Droid’s official catalog**. Anyone who has the public link can access its downloads; “unlisted” does not provide privacy or access control.
+
+**The public page, signed feed, and APK were verified live on 31 October 2026.** Install it on the tablet as follows:
+
+1. [Install F-Droid](https://f-droid.org/F-Droid.apk) if it isn’t already on the device.
+2. Open the [Wilderguard Beta install page](https://sivivatu.github.io/wilderguard-beta/) on the tablet and tap **Add beta to F-Droid**. Confirm adding the repository in F-Droid.
+3. Find **Wilderguard Beta** in F-Droid and tap **Install**. Allow F-Droid to install apps if Android asks.
+
+Alternatively, download the [signed beta APK](https://sivivatu.github.io/wilderguard-beta/fdroid/repo/com.wilderguard.game.beta_1.apk) directly. The install page includes the signing details. The app targets Android API 34, supports API 22 and newer with a modern WebView, and opens in landscape. Physical Tab S4 testing is pending. See [F-Droid beta notes](fdroid/README.md) for publisher and repository details.
+
+The live feed currently contains beta `0.1.0-beta.1`. The updated game, with the selected orcs and stronger waves, is available as the [signed local beta 2 APK](artifacts/Wilderguard-beta-0.1.0-beta.2.apk), version `0.1.0-beta.2` (versionCode 2). It uses the same beta signing identity and can update beta 1 while retaining its checkpoint saves. It is not in the feed yet.
+
+## Play
+
+Pick a tower, tap a marked place on the map, and start the wave when you’re ready. Archer towers fire quickly, Cannons damage groups of monsters, and Frost towers slow their targets. Tap a built tower to upgrade it to level 3 or sell it for 60% of what you spent.
+
+Win diamonds after every wave. On wave 3, earn a Deep Freeze spell; on wave 5, earn Starfall. Mending Light restores kingdom health. After each region, receive an extra supply of **180 diamonds, plus 60 for each region you’ve already freed**, to help build the next defense line. Orcs grow stronger each wave across the campaign. Axe orcs join from wave 2, and an armored chieftain leads each region’s final wave.
+
+Pause, play at 2× speed, or use full screen to adjust how the game feels. In the Android app or when installed to your home screen, the game opens directly into a touch-friendly battle view. Progress saves on this device between waves; if monsters win, you can retry from your last saved setup. Your diamonds and spells carry to the next region, where you choose new towers.
+
+The battlefield and campaign map are drawn in Canvas and SVG. Orcs use pixelated artwork generated from the concept Eric selected. The game bundles all three sprites and the fonts, so battles also work offline. Wilderguard has no accounts, game server, tracking, advertising, or in-app purchases. The Samsung Galaxy Tab S4 in landscape is the target device.
+
+## Play in a browser
+
+Install [Node.js](https://nodejs.org/) 24 LTS, then run:
+
+```sh
+npm install
+npm run dev
+```
+
+Open the local address Vite prints. To build and preview the production version:
+
+```sh
+npm run build
+npm run preview
+```
+
+The production build bundles every asset for offline use. To install the game on the tablet without an APK, serve it over HTTPS, open it in Samsung Internet or Chrome, and choose **Add to Home screen**.
+
+## Build and install on Android
+
+This project includes its Android app. Set `JAVA_HOME` to a JDK 17 installation and `ANDROID_HOME` to your local Android SDK before building. The Android Gradle Plugin and Gradle wrapper are included; the build may download Gradle if it is not already cached. No machine-specific SDK path is committed to the project.
+
+```sh
+npm run android:apk
+```
+
+The script rebuilds the web app, syncs Android assets, and writes a debug APK to `android/app/build/outputs/apk/debug/app-debug.apk`. Make a copy for transfer with `mkdir -p artifacts && cp android/app/build/outputs/apk/debug/app-debug.apk artifacts/Wilderguard-debug.apk`. It will then be available at [artifacts/Wilderguard-debug.apk](artifacts/Wilderguard-debug.apk). Transfer it to the Tab S4 and install it. Android may ask you to allow installation from the app you use to open it.
+
+Capacitor 6 supports Android API 22 and newer with a modern system WebView. This project compiles and targets API 34 and sets API 22 as its minimum. The Tab S4 is intended to run it in landscape. A debug APK is for trying the game; it is not signed for a public store release.
+
+## Development commands
+
+```sh
+npm test                         # game and save-file unit tests
+npm run test:coverage             # coverage report
+npx playwright install chromium   # install the browser for the end-to-end tests
+npm run test:e2e                  # browser end-to-end tests
+npm run build                     # type-check, build, and bundle offline assets
+npm run android:sync              # rebuild web assets and sync Android
+npm run android:apk               # build the debug APK
+npm audit                         # check dependency advisories
+```
+
+A post-install compatibility patch keeps Capacitor CLI 6 working with the patched `tar` 7 dependency and safely checks its expected version and source before editing it.
+
+## Project notes
+
+See [NOTES.md](NOTES.md) for Eric’s original idea and the work still needed before a wider release. See [fdroid/README.md](fdroid/README.md) for the beta publishing runbook.
+
+## Local version control
+
+The complete project is tracked in a local Git repository on `main`. The initial source checkpoint is tagged `v0.1.0-beta.2`; it represents the signed local beta 2 build, not a published release. No remote is configured and nothing has been pushed.
+
+Source code, Android build files, tests, documentation, fonts, and the generated artwork concepts are included. Dependencies, generated builds, APKs, reference archives, local configuration, and signing material are ignored. Existing local artifacts remain in `artifacts/`, including the separate F-Droid distribution checkout. Signing-key custody and recovery are documented in the beta publishing runbook; keys are not part of this repository.

@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Wilderguard</string>
+    <string name="title_activity_main">Wilderguard</string>
+    <string name="package_name">com.wilderguard.game</string>
+    <string name="custom_url_scheme">com.wilderguard.game</string>
+</resources>
