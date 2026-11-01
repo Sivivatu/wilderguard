@@ -15,6 +15,9 @@ Wilderguard tells that story across five places in Elderglen: The Greenfields, W
 - Ordinary orcs gain about 10% health per wave across the campaign. Axe orcs have 1.5 times ordinary health; each region’s chieftain has three times ordinary health and costs three lives if it reaches the castle.
 - Diamond rewards after every wave. Earn Deep Freeze at wave 3 and Starfall at wave 5; use Mending Light to restore health.
 - Pause, 2× speed, fullscreen, touch-friendly controls, and a special battle view in the Android app and installed browser app.
+- The compact phone battle view keeps the map large in landscape. Tower and spell cards stay easy to tap, and **Tower & spell guide** opens the strengths and exact values without spending an item or diamonds.
+- Archer: 15 damage every 0.7 seconds, range 185. Cannon: 35 damage every 1.65 seconds, range 170, with splash damage at less than 65 path units. Frost: 8 damage every 0.8 seconds, range 165; every hit slows its target by 50% for two seconds. Tower upgrades show their current damage, interval, and range.
+- Deep Freeze slows the full wave by 88% for six seconds. Starfall damages every visible enemy for 110 in Greenfields, adding 25% of its base damage per region. Mending Light restores six health, up to 20.
 - A local checkpoint between waves so a retry restores the last saved setup.
 - An offline browser build, an original Android debug preview, and a separate unlisted F-Droid beta built with Capacitor 6.
 - Procedural Canvas and SVG scenery, locally bundled pixel-art orc sprites, and bundled fonts with their license files.
@@ -40,3 +43,11 @@ The local source snapshot matching the published beta’s source manifest is pre
 ## Local Git repository — 1 November 2026
 
 The project now has a local source repository on `main`, with the beta 2 source checkpoint tagged `v0.1.0-beta.2`. No remote or push is configured. The source, Android project, tests, docs, and artwork are tracked; generated artifacts and credentials remain local and ignored. The F-Droid distribution repository inside `artifacts/` is preserved separately.
+
+## Phone interface — beta 3 publication
+
+At 844×390 in battle focus, the battlefield grew from 149px to 248px high (about 38% to 64% of the screen), while the tower, spell, help, and wave controls retain 44px touch targets. Victory actions remain inside the map. Opening the guide pauses an active wave and restores its previous pause state when closed. Combat balance did not change; the guide uses the same tower stat and spell damage calculations as combat.
+
+Beta `0.1.0-beta.3` (versionCode 3) is published and recommended in both signed feed formats. The browser APK is https://sivivatu.github.io/wilderguard-beta/fdroid/repo/com.wilderguard.game.beta_3.apk. Independent HTTPS downloads matched all 20 public payload files; APK v1/v2 signatures, permanent certificate pins, all three immutable release hashes, and the latest recommendation were verified. APK SHA-256: `c2206dcf7d206aaab70715212b5afd3fea7268e366bb88d079f2d5d7157eecde`. The public distribution commit is `e2e4c5c00d279f69b9ffd48a3a6dc28eaf77c6c7`; the source remains local and is tagged `v0.1.0-beta.3`.
+
+Validation for beta 3: 61 unit tests; 99.18% line coverage for the existing instrumented game, save, and artwork modules; all 14 browser tests; 18 release-helper tests; and a successful Android beta build. UI guide coverage is provided by browser tests and is not included in the unit coverage percentage. Physical Android and F-Droid client installation remain unverified.
