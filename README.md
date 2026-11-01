@@ -6,7 +6,7 @@ A pixel-art tower-defense adventure through Elderglen: five places to free, five
 
 ## Unlisted Android beta
 
-Wilderguard Beta (`com.wilderguard.game.beta`, version `0.1.0-beta.3`, versionCode 3) is published in a small, unlisted F-Droid repository. It includes the compact phone interface and tower/spell guide. It is separate from the original Android preview and does not import that preview's saved progress. Updates from an earlier beta preserve the beta's checkpoint saves. This is a developer-run repository, **not an app in F-Droid’s official catalog**. Anyone who has the public link can access its downloads; “unlisted” does not provide privacy or access control.
+Wilderguard Beta (`com.wilderguard.game.beta`, version `0.1.0-beta.4`, versionCode 4) is published in a small, unlisted F-Droid repository. It includes the compact phone interface, tower/spell guide, and contagious level 3 Frost nova. It is separate from the original Android preview and does not import that preview's saved progress. Updates from an earlier beta preserve the beta's checkpoint saves. This is a developer-run repository, **not an app in F-Droid’s official catalog**. Anyone who has the public link can access its downloads; “unlisted” does not provide privacy or access control.
 
 **The public page, signed feed, and APK were verified live on 1 November 2026.** Install it on the tablet as follows:
 
@@ -14,15 +14,17 @@ Wilderguard Beta (`com.wilderguard.game.beta`, version `0.1.0-beta.3`, versionCo
 2. Open the [Wilderguard Beta install page](https://sivivatu.github.io/wilderguard-beta/) on the tablet and tap **Add beta to F-Droid**. Confirm adding the repository in F-Droid.
 3. Find **Wilderguard Beta** in F-Droid and tap **Install**. Allow F-Droid to install apps if Android asks.
 
-Alternatively, download the [signed beta APK](https://sivivatu.github.io/wilderguard-beta/fdroid/repo/com.wilderguard.game.beta_3.apk) directly. The install page includes the signing details. The app targets Android API 34, supports API 22 and newer with a modern WebView, and opens in landscape. Physical Tab S4 testing is pending. See [F-Droid beta notes](fdroid/README.md) for publisher and repository details.
+Alternatively, download the [signed beta APK](https://sivivatu.github.io/wilderguard-beta/fdroid/repo/com.wilderguard.game.beta_4.apk) directly. The install page includes the signing details. The app targets Android API 34, supports API 22 and newer with a modern WebView, and opens in landscape. Physical Tab S4 testing is pending. See [F-Droid beta notes](fdroid/README.md) for publisher and repository details.
 
-The live feed recommends beta `0.1.0-beta.3`. Refresh the repository in F-Droid to update, or use the direct signed APK link above. Betas 1 and 2 remain available unchanged, and all three APKs use the same permanent signing identity.
+The live feed recommends beta `0.1.0-beta.4`. Refresh the repository in F-Droid to update, or use the direct signed APK link above. Betas 1, 2 and 3 remain available unchanged, and all four APKs use the same permanent signing identity.
 
 ## Play
 
 Pick a tower, tap a marked place on the map, and start the wave when you’re ready. Archer towers fire quickly for 15 damage every 0.7 seconds at range 185. Cannons deal 35 damage every 1.65 seconds at range 170, and splash nearby enemies. Frost towers deal 8 damage every 0.8 seconds at range 165 and always slow a target by 50% for 2 seconds when they hit. Tap a built tower to see its level-specific damage, firing interval, range and upgrades, or open **Tower & spell guide** for all the details. Upgrades increase damage, range and speed; sell a tower for 60% of what you spent.
 
 The guide is available by touch at any time, including when spells are disabled or empty. It explains that Deep Freeze slows the wave by 88% for 6 seconds, Starfall deals 110 damage to visible monsters in the first region (adding 25% of its base damage per region), and Mending Light restores 6 health up to 20. Descriptions and combat use the same stat calculations.
+
+Level 3 Frost towers unlock **Frost nova**: if a mob dies while its level 3 Frost chill is active, an icy blast slows living, visible mobs within 90 battlefield units by 50% for 2 seconds. Any tower or Starfall can trigger the burst; newly chilled mobs can spread it again if they die before the slow expires. The blast adds no damage. Levels 1 and 2 and Deep Freeze alone do not trigger Frost nova.
 
 Win diamonds after every wave. On wave 3, earn a Deep Freeze spell; on wave 5, earn Starfall. Mending Light restores kingdom health. After each region, receive an extra supply of **180 diamonds, plus 60 for each region you’ve already freed**, to help build the next defense line. Orcs grow stronger each wave across the campaign. Axe orcs join from wave 2, and an armored chieftain leads each region’s final wave.
 
@@ -81,6 +83,6 @@ See [NOTES.md](NOTES.md) for Eric’s original idea and the work still needed be
 
 ## Local version control
 
-The complete project is tracked in a local Git repository on `main`. The beta 2 source checkpoint is tagged `v0.1.0-beta.2`; the beta 3 source checkpoint is tagged `v0.1.0-beta.3`. The source repository has no remote and has not been pushed. Android install material is published separately through the existing F-Droid distribution repository.
+The complete project is tracked in a local Git repository on `main`. The beta 2 source checkpoint is tagged `v0.1.0-beta.2`; the beta 3 and 4 source checkpoints are tagged `v0.1.0-beta.3` and `v0.1.0-beta.4`. The source repository has no remote and has not been pushed. Android install material is published separately through the existing F-Droid distribution repository.
 
 Source code, Android build files, tests, documentation, fonts, and the generated artwork concepts are included. Dependencies, generated builds, APKs, reference archives, local configuration, and signing material are ignored. Existing local artifacts remain in `artifacts/`, including the separate F-Droid distribution checkout. Signing-key custody and recovery are documented in the beta publishing runbook; keys are not part of this repository.
