@@ -3,17 +3,19 @@ export type Spell = 'meteor' | 'freeze' | 'heal';
 export type Phase = 'preparing' | 'wave' | 'reward' | 'defeat' | 'victory';
 export interface Point { x: number; y: number }
 export interface Tower { id: string; slotId: number; type: TowerType; level: number; cooldown: number }
-export interface Enemy { id: number; distance: number; hp: number; maxHp: number; speed: number; kind: 'clubber' | 'axeman' | 'chieftain'; slow: number }
+export interface Enemy { id: number; distance: number; hp: number; maxHp: number; speed: number; kind: 'clubber' | 'axeman' | 'chieftain'; slow: number; frostNovaTime?: number }
 export interface Shot { from: Point; to: Point; type: TowerType; life: number }
+export interface FrostBurst { position: Point; life: number }
 export interface GameState {
   regionIndex: number; diamonds: number; lives: number; wave: number; phase: Phase;
-  towers: Tower[]; enemies: Enemy[]; shots: Shot[]; inventory: Record<Spell, number>;
+  towers: Tower[]; enemies: Enemy[]; shots: Shot[]; frostBursts: FrostBurst[]; inventory: Record<Spell, number>;
   reward: { diamonds: number; item: Spell | null } | null;
   elapsed: number; freezeTime: number; kills: number;
 }
 export const WAVES_PER_REGION = 5;
 export const MAX_TOWER_LEVEL = 3;
 export const EFFECTS = { frostSpeed: .5, frostSeconds: 2, freezeSpeed: .12, freezeSeconds: 6, healHealth: 6, maxHealth: 20, splashDistance: 65 } as const;
+export const FROST_NOVA = { radius: 90, life: .65, level: 3 } as const;
 export const REGIONS = [
   { name: 'The Greenfields', subtitle: 'Where your story begins', biome: 'Meadow', color: '#89ad65', monster: 'Greenfield club orcs', difficulty: 'Gentle beginnings' },
   { name: 'Whispering Woods', subtitle: 'Something stirs in the trees', biome: 'Forest', color: '#52836a', monster: 'Whispering Woods axe orcs', difficulty: 'Growing danger' },
@@ -59,7 +61,7 @@ export function createGame(regionIndex = 0, diamonds = 120): GameState {
   return {
     regionIndex: Math.min(REGIONS.length - 1, Math.max(0, Math.floor(regionIndex) || 0)),
     diamonds: Number.isFinite(diamonds) ? Math.max(0, Math.floor(diamonds)) : 120,
-    lives: 20, wave: 0, phase: 'preparing', towers: [], enemies: [], shots: [],
+    lives: 20, wave: 0, phase: 'preparing', towers: [], enemies: [], shots: [], frostBursts: [],
     inventory: { meteor: 1, freeze: 2, heal: 1 }, reward: null, elapsed: 0, freezeTime: 0, kills: 0,
   };
 }
@@ -100,11 +102,12 @@ export function startWave(state: GameState): GameState {
       speed: speed * (isChieftain ? .75 : isAxeman ? 1.04 : 1),
       kind, slow: 0 };
   });
-  return { ...state, wave, phase: 'wave', enemies, reward: null, shots: [] };
+  return { ...state, wave, phase: 'wave', enemies, reward: null, shots: [], frostBursts: [] };
 }
 function moveEnemies(state: GameState, dt: number): Enemy[] {
   return state.enemies.map(enemy => ({ ...enemy, slow: Math.max(0, enemy.slow - dt),
-    distance: enemy.distance + enemy.speed * dt * (state.freezeTime > 0 ? EFFECTS.freezeSpeed : enemy.slow > 0 ? EFFECTS.frostSpeed : 1) }));
+    frostNovaTime: Math.max(0, (enemy.frostNovaTime ?? 0) - dt),
+    distance: enemy.hp <= 0 ? enemy.distance : enemy.distance + enemy.speed * dt * (state.freezeTime > 0 ? EFFECTS.freezeSpeed : enemy.slow > 0 ? EFFECTS.frostSpeed : 1) }));
 }
 function fireTowers(towers: Tower[], moved: Enemy[], dt: number): { towers: Tower[]; enemies: Enemy[]; shots: Shot[] } {
   let enemies = moved;
@@ -121,12 +124,27 @@ function fireTowers(towers: Tower[], moved: Enemy[], dt: number): { towers: Towe
     const damage = stats.damage;
     enemies = enemies.map(enemy => {
       const hit = enemy.id === target.id || (tower.type === 'cannon' && enemy.distance >= 0 && Math.abs(enemy.distance - target.distance) < EFFECTS.splashDistance);
-      return hit ? { ...enemy, hp: enemy.hp - damage, slow: tower.type === 'frost' ? EFFECTS.frostSeconds : enemy.slow } : enemy;
+      return hit ? { ...enemy, hp: enemy.hp - damage, slow: tower.type === 'frost' ? EFFECTS.frostSeconds : enemy.slow,
+        frostNovaTime: tower.type === 'frost' && tower.level === FROST_NOVA.level ? EFFECTS.frostSeconds : enemy.frostNovaTime } : enemy;
     });
     shots = [...shots, { from: { x: position.x, y: position.y - 27 }, to: point, type: tower.type, life: .2 }];
     return { ...tower, cooldown: stats.interval };
   });
   return { towers: updated, enemies, shots };
+}
+function spreadFrostOnDeath(enemies: Enemy[]): { enemies: Enemy[]; bursts: FrostBurst[] } {
+  const bursts = enemies.filter(enemy => enemy.hp <= 0 && (enemy.frostNovaTime ?? 0) > 0 && enemy.distance >= 0 && enemy.distance < PATH_LENGTH)
+    .map(enemy => ({ position: pointOnPath(enemy.distance), life: FROST_NOVA.life }));
+  if (!bursts.length) return { enemies, bursts };
+  const chilled = enemies.map(enemy => {
+    // Clear consumed marks so spell victims cannot burst again on the next tick.
+    if (enemy.hp <= 0) return { ...enemy, frostNovaTime: 0 };
+    if (enemy.distance < 0 || enemy.distance >= PATH_LENGTH) return enemy;
+    const position = pointOnPath(enemy.distance);
+    const inBlast = bursts.some(burst => Math.hypot(position.x - burst.position.x, position.y - burst.position.y) <= FROST_NOVA.radius);
+    return inBlast ? { ...enemy, slow: EFFECTS.frostSeconds, frostNovaTime: EFFECTS.frostSeconds } : enemy;
+  });
+  return { enemies: chilled, bursts };
 }
 export function getWaveReward(regionIndex: number, wave: number): { diamonds: number; item: Spell | null } {
   const supplies = wave === WAVES_PER_REGION ? 180 + regionIndex * 60 : 0;
@@ -139,17 +157,22 @@ function completeWave(state: GameState): GameState {
     inventory: item ? { ...state.inventory, [item]: state.inventory[item] + 1 } : state.inventory };
 }
 export function tickGame(state: GameState, deltaSeconds: number): GameState {
-  if (state.phase !== 'wave' || !Number.isFinite(deltaSeconds) || deltaSeconds <= 0) return state;
+  if (!Number.isFinite(deltaSeconds) || deltaSeconds <= 0) return state;
   const dt = Math.min(.1, deltaSeconds);
-  const combat = fireTowers(state.towers, moveEnemies(state, dt), dt);
+  const frostBursts = state.frostBursts.map(burst => ({ ...burst, life: burst.life - dt })).filter(burst => burst.life > 0);
+  if (state.phase !== 'wave') return state.frostBursts.length ? { ...state, frostBursts } : state;
+  const fired = fireTowers(state.towers, moveEnemies(state, dt), dt);
+  const spread = spreadFrostOnDeath(fired.enemies);
+  const combat = { ...fired, enemies: spread.enemies };
   const escaped = combat.enemies.filter(enemy => enemy.hp > 0 && enemy.distance >= PATH_LENGTH);
   const killed = combat.enemies.filter(enemy => enemy.hp <= 0).length;
   const next: GameState = { ...state, towers: combat.towers,
+    frostBursts: [...frostBursts, ...spread.bursts],
     enemies: combat.enemies.filter(enemy => enemy.hp > 0 && enemy.distance < PATH_LENGTH),
     shots: [...state.shots.map(shot => ({ ...shot, life: shot.life - dt })).filter(shot => shot.life > 0), ...combat.shots],
     lives: Math.max(0, state.lives - escaped.reduce((loss, enemy) => loss + (enemy.kind === 'chieftain' ? 3 : 1), 0)),
     kills: state.kills + killed, elapsed: state.elapsed + dt, freezeTime: Math.max(0, state.freezeTime - dt) };
-  if (next.lives === 0) return { ...next, phase: 'defeat', enemies: [], shots: [] };
+  if (next.lives === 0) return { ...next, phase: 'defeat', enemies: [], shots: [], frostBursts: [] };
   return next.enemies.length === 0 ? completeWave(next) : next;
 }
 export function useSpell(state: GameState, spell: Spell): GameState {
@@ -157,7 +180,8 @@ export function useSpell(state: GameState, spell: Spell): GameState {
   const next = { ...state, inventory: { ...state.inventory, [spell]: state.inventory[spell] - 1 } };
   if (spell === 'heal') return { ...next, lives: Math.min(EFFECTS.maxHealth, state.lives + EFFECTS.healHealth) };
   if (spell === 'freeze') return { ...next, freezeTime: EFFECTS.freezeSeconds };
-  return { ...next, enemies: state.enemies.map(enemy => enemy.distance >= 0 ? { ...enemy, hp: enemy.hp - meteorDamage(state.regionIndex) } : enemy) };
+  const spread = spreadFrostOnDeath(state.enemies.map(enemy => enemy.distance >= 0 ? { ...enemy, hp: enemy.hp - meteorDamage(state.regionIndex) } : enemy));
+  return { ...next, enemies: spread.enemies, frostBursts: [...state.frostBursts, ...spread.bursts] };
 }
 export function advanceRegion(state: GameState): GameState {
   if (state.phase !== 'victory' || state.regionIndex >= REGIONS.length - 1) return state;

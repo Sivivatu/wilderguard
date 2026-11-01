@@ -13,10 +13,10 @@ test('a level 3 Frost kill draws an icy burst and the guide explains contagion',
     const tracked = window as unknown as { frostBurstDraws: number };
     tracked.frostBurstDraws = 0;
     const stroke = CanvasRenderingContext2D.prototype.stroke;
-    CanvasRenderingContext2D.prototype.stroke = function (...args: Parameters<typeof stroke>) {
+    CanvasRenderingContext2D.prototype.stroke = function (this: CanvasRenderingContext2D, ...args: unknown[]) {
       if (this.canvas.id === 'game-canvas' && this.strokeStyle === '#a9edff') tracked.frostBurstDraws += 1;
       return Reflect.apply(stroke, this, args);
-    };
+    } as typeof stroke;
   });
   await page.goto('/');
   await expect(page.locator('#game-canvas')).toHaveAttribute('data-artwork', 'ready');

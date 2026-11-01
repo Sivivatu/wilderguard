@@ -227,6 +227,7 @@ function frame(timestamp: number) {
     if (state.phase !== previousPhase) { persist(); playSound(state.phase === 'defeat' ? 'build' : 'win'); updateUI(); }
     else if (timestamp - lastUiUpdate > 500) { updateUI(); lastUiUpdate = timestamp; }
   }
+  else if (!paused && state.frostBursts.length) state = tickGame(state, dt);
   renderer.draw(state, selectedSlot, selectedType, timestamp / 1000);
   requestAnimationFrame(frame);
 }

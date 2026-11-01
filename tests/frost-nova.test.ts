@@ -1,8 +1,9 @@
 import { expect, test } from 'vitest';
 import {
-  buildTower, createGame, FROST_NOVA, PATH_LENGTH, startWave, tickGame,
+  advanceRegion, buildTower, createGame, FROST_NOVA, PATH_LENGTH, startWave, tickGame,
   upgradeTower, useSpell, type Enemy, type GameState,
 } from '../src/game';
+import { decodeSave, encodeSave } from '../src/save';
 
 function prepareEnemy(
   { distance, hp = 100, slow = 0, frostNovaTime = undefined }: Partial<Enemy> & Pick<Enemy, 'distance'>,
@@ -74,14 +75,63 @@ test('a frost mark spreads when Starfall kills its target', () => {
   expect(resolved.enemies.find(enemy => enemy.id === 2)?.slow).toBeGreaterThan(0);
 });
 
-test('level 1 and 2 frost slows do not carry the level 3 death effect', () => {
+test.each([1, 2])('level %i frost slows do not carry the level 3 death effect', level => {
   let state = buildLevelThreeFrost();
-  state = { ...state, towers: [{ ...state.towers[0], level: 2 }] };
+  state = { ...state, towers: [{ ...state.towers[0], level }] };
   const wave = waveWith(prepareEnemy({ distance: 480, hp: 10 }, 1), prepareEnemy({ distance: 530 }, 2));
   const result = tickGame({ ...wave, towers: state.towers }, 0.1);
 
   expect(result.enemies.find(enemy => enemy.id === 2)?.slow ?? 0).toBe(0);
   expect(result.frostBursts).toEqual([]);
+});
+
+test('a burst includes the radius boundary but excludes enemies just beyond it', () => {
+  const wave = waveWith(
+    prepareEnemy({ distance: 100, hp: 1, frostNovaTime: 2, slow: 2 }, 1),
+    prepareEnemy({ distance: 190, hp: 300 }, 2),
+    prepareEnemy({ distance: 190.1, hp: 300 }, 3),
+  );
+  const result = useSpell(wave, 'meteor');
+  expect(result.enemies.find(enemy => enemy.id === 2)?.slow).toBe(2);
+  expect(result.enemies.find(enemy => enemy.id === 3)?.slow).toBe(0);
+  expect(wave.enemies[1].slow).toBe(0);
+});
+
+test('simultaneous marked deaths produce the same spread regardless of enemy order', () => {
+  const wave = waveWith(
+    prepareEnemy({ distance: 480, hp: 1, frostNovaTime: 2, slow: 2 }, 1),
+    prepareEnemy({ distance: 530, hp: 1, frostNovaTime: 2, slow: 2 }, 2),
+    prepareEnemy({ distance: 560, hp: 300 }, 3),
+  );
+  const forward = useSpell(wave, 'meteor');
+  const reverse = useSpell({ ...wave, enemies: [...wave.enemies].reverse() }, 'meteor');
+  expect(forward.frostBursts).toHaveLength(2);
+  expect(forward.enemies.find(enemy => enemy.id === 3)).toEqual(reverse.enemies.find(enemy => enemy.id === 3));
+  const resolved = tickGame(forward, .1);
+  expect(resolved.kills).toBe(2);
+  expect(resolved.frostBursts).toHaveLength(2);
+});
+
+test('Deep Freeze by itself does not grant the contagious chill', () => {
+  const archer = buildTower(createGame(0, 1000), 2, 'archer').towers;
+  const wave = waveWith(prepareEnemy({ distance: 480, hp: 1 }, 1), prepareEnemy({ distance: 530 }, 2));
+  const frozen = useSpell({ ...wave, towers: archer }, 'freeze');
+  const result = tickGame(frozen, .1);
+  expect(result.kills).toBe(1);
+  expect(result.frostBursts).toEqual([]);
+});
+
+test('the last death burst fades between waves and a region move clears it', () => {
+  const state = buildLevelThreeFrost();
+  const result = tickGame({ ...waveWith(prepareEnemy({ distance: 480, hp: 1 }, 1)), towers: state.towers }, .1);
+  expect(result.phase).toBe('reward');
+  let faded = result;
+  for (let i = 0; i < 7; i += 1) faded = tickGame(faded, .1);
+  expect(faded.frostBursts).toEqual([]);
+  expect(advanceRegion({ ...result, phase: 'victory', wave: 5 }).frostBursts).toEqual([]);
+  const restored = decodeSave(encodeSave(result));
+  expect(restored?.frostBursts).toEqual([]);
+  expect(restored?.towers[0].level).toBe(3);
 });
 
 test('a level 3 mark expires before death and no longer bursts', () => {
@@ -145,7 +195,7 @@ test('a burst plays and expires without carrying into the next wave or region', 
   const state = buildLevelThreeFrost();
   const wave = waveWith(prepareEnemy({ distance: 480, hp: 1 }, 1), prepareEnemy({ distance: 530 }, 2));
   const burst = tickGame({ ...wave, towers: state.towers }, 0.1);
-  let expired = { ...burst, towers: [], enemies: [prepareEnemy({ distance: 100 }, 3)] };
+  let expired: GameState = { ...burst, towers: [], enemies: [prepareEnemy({ distance: 100 }, 3)] };
   for (let frame = 0; frame < 7; frame += 1) expired = tickGame(expired, 0.1);
 
   expect(burst.frostBursts).toHaveLength(1);

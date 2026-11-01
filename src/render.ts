@@ -1,4 +1,5 @@
 import { loadOrcArt, type OrcArt } from './orc-art';
+import { drawFrostBurst } from './frost-nova-art';
 import { PATH, SLOTS, TOWER_TYPES, pointOnPath, type GameState, type TowerType } from './game';
 
 export const MAP_WIDTH = 1100;
@@ -180,6 +181,13 @@ function monster(ctx: Context, enemy: GameState['enemies'][number], art: OrcArt)
     ctx.strokeStyle = '#b7f6ee'; ctx.lineWidth = 2;
     ctx.strokeRect(-width * .22, 3, width * .5, 6);
   }
+  if ((enemy.frostNovaTime ?? 0) > 0) {
+    ctx.fillStyle = '#d4f9ff';
+    for (const x of [-width * .35, width * .35]) {
+      ctx.fillRect(Math.round(x) - 2, -height / 2, 5, 5);
+      ctx.fillRect(Math.round(x) - 2, -height / 2 - 4, 2, 13);
+    }
+  }
   ctx.imageSmoothingEnabled = false;
   ctx.drawImage(image, Math.round(-width * .63), Math.round(8 - height + bob), width, height);
   if (enemy.hp < enemy.maxHp) {
@@ -238,6 +246,7 @@ export class GameRenderer {
       ctx.globalAlpha = Math.max(0, shot.life / .2); ctx.strokeStyle = shot.type === 'frost' ? '#d4f9f4' : shot.type === 'cannon' ? '#ffe0a2' : '#faf0b9'; ctx.lineWidth = shot.type === 'cannon' ? 4 : 2;
       ctx.beginPath(); ctx.moveTo(shot.from.x, shot.from.y); ctx.lineTo(shot.to.x, shot.to.y); ctx.stroke(); ellipse(ctx, shot.to.x, shot.to.y, 5, 5, ctx.strokeStyle); ctx.globalAlpha = 1;
     }
+    for (const burst of state.frostBursts) drawFrostBurst(ctx, burst);
     if (state.freezeTime > 0) { ctx.fillStyle = '#b8eff222'; ctx.fillRect(0, 0, MAP_WIDTH, MAP_HEIGHT); }
     // Drifting flecks of light, subtle enough to leave the defenses in focus.
     for (let i = 0; i < 8; i += 1) { const x = (random(i + 600) * 1100 + time * 5) % 1100; const y = random(i + 700) * 600 + Math.sin(time * .4 + i) * 12; ellipse(ctx, x, y, 1.5, 1.5, '#fff7d77a'); }

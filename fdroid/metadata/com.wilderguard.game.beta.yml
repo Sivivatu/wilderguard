@@ -15,5 +15,5 @@ Description: |
   There are no accounts, advertising, tracking, or in-app purchases.
   Saved progress stays on the device. The beta installs separately from the
   original debug preview and does not import that preview's saved progress.
-CurrentVersion: 0.1.0-beta.3
-CurrentVersionCode: 3
+CurrentVersion: 0.1.0-beta.4
+CurrentVersionCode: 4
