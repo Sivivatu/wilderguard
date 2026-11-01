@@ -13,6 +13,7 @@ export interface GameState {
 }
 export const WAVES_PER_REGION = 5;
 export const MAX_TOWER_LEVEL = 3;
+export const EFFECTS = { frostSpeed: .5, frostSeconds: 2, freezeSpeed: .12, freezeSeconds: 6, healHealth: 6, maxHealth: 20, splashDistance: 65 } as const;
 export const REGIONS = [
   { name: 'The Greenfields', subtitle: 'Where your story begins', biome: 'Meadow', color: '#89ad65', monster: 'Greenfield club orcs', difficulty: 'Gentle beginnings' },
   { name: 'Whispering Woods', subtitle: 'Something stirs in the trees', biome: 'Forest', color: '#52836a', monster: 'Whispering Woods axe orcs', difficulty: 'Growing danger' },
@@ -23,8 +24,13 @@ export const REGIONS = [
 export const TOWER_TYPES: Record<TowerType, { name: string; cost: number; damage: number; range: number; interval: number; description: string; color: string }> = {
   archer: { name: 'Archer tower', cost: 70, damage: 15, range: 185, interval: .7, description: 'Quick shots. Steady aim.', color: '#57875c' },
   cannon: { name: 'Cannon tower', cost: 100, damage: 35, range: 170, interval: 1.65, description: 'A little more firepower.', color: '#a17c50' },
-  frost: { name: 'Frost tower', cost: 85, damage: 8, range: 165, interval: .8, description: 'Slow them. Stop them.', color: '#6f9fa3' },
+  frost: { name: 'Frost tower', cost: 85, damage: 8, range: 165, interval: .8, description: 'Slow every target you hit.', color: '#6f9fa3' },
 };
+export function towerStats(type: TowerType, level: number) {
+  const base = TOWER_TYPES[type];
+  return { damage: base.damage * (1 + (level - 1) * .7), range: base.range + (level - 1) * 15, interval: base.interval / (1 + (level - 1) * .15) };
+}
+export function meteorDamage(regionIndex: number) { return 110 * (1 + regionIndex * .25); }
 export const SLOTS = [
   { id: 1, x: 305, y: 275 }, { id: 2, x: 165, y: 205 }, { id: 3, x: 365, y: 425 },
   { id: 4, x: 550, y: 285 }, { id: 5, x: 725, y: 335 }, { id: 6, x: 870, y: 330 },
@@ -98,7 +104,7 @@ export function startWave(state: GameState): GameState {
 }
 function moveEnemies(state: GameState, dt: number): Enemy[] {
   return state.enemies.map(enemy => ({ ...enemy, slow: Math.max(0, enemy.slow - dt),
-    distance: enemy.distance + enemy.speed * dt * (state.freezeTime > 0 ? .12 : enemy.slow > 0 ? .5 : 1) }));
+    distance: enemy.distance + enemy.speed * dt * (state.freezeTime > 0 ? EFFECTS.freezeSpeed : enemy.slow > 0 ? EFFECTS.frostSpeed : 1) }));
 }
 function fireTowers(towers: Tower[], moved: Enemy[], dt: number): { towers: Tower[]; enemies: Enemy[]; shots: Shot[] } {
   let enemies = moved;
@@ -107,18 +113,18 @@ function fireTowers(towers: Tower[], moved: Enemy[], dt: number): { towers: Towe
     const cooldown = Math.max(0, tower.cooldown - dt);
     if (cooldown > 0) return { ...tower, cooldown };
     const position = SLOTS.find(slot => slot.id === tower.slotId)!;
-    const stats = TOWER_TYPES[tower.type];
+    const stats = towerStats(tower.type, tower.level);
     const target = enemies.filter(enemy => enemy.hp > 0 && enemy.distance >= 0 && enemy.distance < PATH_LENGTH)
-      .find(enemy => { const point = pointOnPath(enemy.distance); return Math.hypot(point.x - position.x, point.y - position.y) <= stats.range + (tower.level - 1) * 15; });
+      .find(enemy => { const point = pointOnPath(enemy.distance); return Math.hypot(point.x - position.x, point.y - position.y) <= stats.range; });
     if (!target) return { ...tower, cooldown: 0 };
     const point = pointOnPath(target.distance);
-    const damage = stats.damage * (1 + (tower.level - 1) * .7);
+    const damage = stats.damage;
     enemies = enemies.map(enemy => {
-      const hit = enemy.id === target.id || (tower.type === 'cannon' && enemy.distance >= 0 && Math.abs(enemy.distance - target.distance) < 65);
-      return hit ? { ...enemy, hp: enemy.hp - damage, slow: tower.type === 'frost' ? 2 : enemy.slow } : enemy;
+      const hit = enemy.id === target.id || (tower.type === 'cannon' && enemy.distance >= 0 && Math.abs(enemy.distance - target.distance) < EFFECTS.splashDistance);
+      return hit ? { ...enemy, hp: enemy.hp - damage, slow: tower.type === 'frost' ? EFFECTS.frostSeconds : enemy.slow } : enemy;
     });
     shots = [...shots, { from: { x: position.x, y: position.y - 27 }, to: point, type: tower.type, life: .2 }];
-    return { ...tower, cooldown: stats.interval / (1 + (tower.level - 1) * .15) };
+    return { ...tower, cooldown: stats.interval };
   });
   return { towers: updated, enemies, shots };
 }
@@ -149,9 +155,9 @@ export function tickGame(state: GameState, deltaSeconds: number): GameState {
 export function useSpell(state: GameState, spell: Spell): GameState {
   if (state.phase !== 'wave' || !Object.prototype.hasOwnProperty.call(state.inventory, spell) || state.inventory[spell] < 1 || (spell === 'heal' && state.lives >= 20)) return state;
   const next = { ...state, inventory: { ...state.inventory, [spell]: state.inventory[spell] - 1 } };
-  if (spell === 'heal') return { ...next, lives: Math.min(20, state.lives + 6) };
-  if (spell === 'freeze') return { ...next, freezeTime: 6 };
-  return { ...next, enemies: state.enemies.map(enemy => enemy.distance >= 0 ? { ...enemy, hp: enemy.hp - 110 * (1 + state.regionIndex * .25) } : enemy) };
+  if (spell === 'heal') return { ...next, lives: Math.min(EFFECTS.maxHealth, state.lives + EFFECTS.healHealth) };
+  if (spell === 'freeze') return { ...next, freezeTime: EFFECTS.freezeSeconds };
+  return { ...next, enemies: state.enemies.map(enemy => enemy.distance >= 0 ? { ...enemy, hp: enemy.hp - meteorDamage(state.regionIndex) } : enemy) };
 }
 export function advanceRegion(state: GameState): GameState {
   if (state.phase !== 'victory' || state.regionIndex >= REGIONS.length - 1) return state;

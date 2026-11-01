@@ -215,3 +215,72 @@ dialog { width: min(560px, 90vw); max-height: 88vh; background: #faf9ee; color: 
 .battle-focus .focus-menu svg { width: 15px; height: 15px; }
 @media (pointer: coarse) { .battle-focus .focus-menu { min-width: 42px; min-height: 42px; } }
 @media (max-width: 580px) { .battle-focus .location-label div > span { display: none; }.battle-focus .location-label h2 { font-size: 10px; }.battle-focus .board-hud { gap: 6px; }.battle-focus .wave-label { font-size: 0; }.battle-focus .wave-label > strong { font-size: 10px; }.battle-focus .focus-wallet { font-size: 10px; gap: 3px; }.battle-focus .focus-wallet svg { width: 13px; }.battle-focus .hud-divider { display: none; } }
+
+/* Details remain available even when there are no usable spell items. */
+.defense-help { display: flex; align-items: center; justify-content: center; gap: 6px; min-height: 44px; padding: 7px 10px; border: 1px solid #cbd5b8; border-radius: 7px; background: #edf0df; color: #365d43; font-size: 11px; }
+.defense-help svg { width: 18px; height: 18px; }
+.defense-help span { max-width: 95px; }
+.supply-row { gap: 10px; }
+.defense-detail { border-top: 1px solid #dce1cd; padding: 14px 0; }
+.defense-detail h3 { font-size: 15px; }
+.defense-detail h3 small { display: inline-block; color: #526f49; font-size: 11px; margin-left: 8px; }
+.defense-detail p, .defense-detail li { font-size: 12px; line-height: 1.65; color: #526249; }
+.defense-detail p { margin-top: 6px; }
+.defense-detail ul { margin: 8px 0 0; padding-left: 18px; }
+#dialog-content .abilities-heading { margin-top: 18px; font-size: 23px; }
+dialog { max-height: 90vh; max-height: 90dvh; overflow-y: auto; overscroll-behavior: contain; }
+.dialog-close { position: sticky; top: 0; margin-left: auto; display: grid; z-index: 1; background: #faf9ee; min-width: 44px; min-height: 44px; }
+.popover-stats { max-width: 220px; font-size: 11px; line-height: 1.5; margin: 4px 0; }
+.popover-guide { min-height: 44px; background: transparent; padding: 4px 0; font-size: 11px; display: flex; align-items: center; gap: 5px; color: #365d43; }
+.tower-popover { max-height: calc(100% - 8px); overflow-y: auto; }
+.pause-overlay, .result-overlay { overflow-y: auto; }
+.pause-overlay > *, .result-overlay > * { flex-shrink: 0; }
+
+/* Short landscape phones use compact chrome and keep the map dominant. */
+@media (max-height: 500px) and (orientation: landscape) {
+  .battle-focus .game-layout { padding: max(2px, env(safe-area-inset-top)) max(4px, env(safe-area-inset-right)) max(2px, env(safe-area-inset-bottom)) max(4px, env(safe-area-inset-left)); }
+  .battle-focus .board-top { height: 44px; padding: 0 10px; }
+  .battle-focus .location-icon, .battle-focus .location-label div > span, .battle-focus .hud-divider { display: none; }
+  .battle-focus .location-label h2 { font-size: 13px; }
+  .battle-focus .board-hud { gap: 9px; }
+  .battle-focus .pause-button, .battle-focus .speed-button, .battle-focus .focus-menu { min-width: 44px; min-height: 44px; margin: 0; }
+  .battle-focus .battle-bottom { display: none; }
+  .battle-focus .defense-controls { height: 44px; margin-top: 2px; gap: 6px; }
+  .battle-focus .tower-cards { min-width: 0; gap: 5px; }
+  .battle-focus .tower-card { min-width: 0; min-height: 44px; padding: 4px 7px; justify-content: center; text-align: center; }
+  .battle-focus .tower-art, .battle-focus .tower-role, .battle-focus .tower-check, .battle-focus .tower-info p { display: none; }
+  .battle-focus .tower-info { padding: 0; }
+  .battle-focus .tower-info > strong { font-size: 11px; margin: 0; white-space: nowrap; }
+  .battle-focus .tower-price { justify-content: center; font-size: 10px; margin-top: 2px; gap: 4px; }
+  .battle-focus .tower-price svg { width: 10px; height: 10px; }
+  .battle-focus .start-wave { width: 170px; min-height: 44px; padding: 5px 10px; gap: 5px; }
+  .battle-focus .start-wave strong { font-size: 12px; }
+  .battle-focus .start-wave small, .battle-focus .start-icon { display: none; }
+  .battle-focus .start-wave > svg { width: 15px; }
+  .battle-focus .supply-row { height: 44px; min-height: 44px; padding: 0; margin-top: 2px; border: 0; background: transparent; gap: 6px; }
+  .battle-focus .supplies-intro { display: none; }
+  .battle-focus .defense-help { min-width: 148px; height: 44px; }
+  .battle-focus .defense-help span { max-width: none; }
+  .battle-focus .spell-buttons { flex: 1; gap: 6px; }
+  .battle-focus .spell-button { min-width: 0; flex: 1; min-height: 44px; justify-content: center; padding: 4px 8px; gap: 7px; }
+  .battle-focus .spell-button > span { font-size: 10px; }
+  .battle-focus .spell-button > strong { font-size: 10px; }
+  .battle-focus .map-caption { top: 6px; left: 6px; font-size: 8px; padding: 4px 7px; }
+  .battle-focus .map-hint { bottom: 6px; padding: 5px 9px; }
+  .battle-focus .tower-popover { top: 50% !important; left: 50% !important; max-width: calc(100% - 12px); }
+  .battle-focus .fullscreen-button { min-width: 44px; min-height: 44px; right: 4px; bottom: 4px; }
+  .battle-focus .result-overlay, .battle-focus .pause-overlay { padding: 10px; }
+  .battle-focus .result-icon, .battle-focus .pause-overlay > span, .battle-focus .result-overlay .eyebrow { display: none; }
+  .battle-focus .result-overlay h2, .battle-focus .pause-overlay h2 { font-size: 23px; margin-bottom: 5px; }
+  .battle-focus .result-overlay p, .battle-focus .pause-overlay p { font-size: 11px; line-height: 1.4; max-width: 430px; }
+  .battle-focus .result-rewards { font-size: 11px; margin-top: 8px; }
+  .battle-focus .result-overlay .primary-button, .battle-focus .pause-overlay .primary-button { min-height: 44px; margin-top: 10px; padding: 8px 16px; font-size: 12px; }
+  dialog { padding: 10px 22px 20px; }
+}
+@media (orientation: portrait) {
+  .battle-focus .defense-help { min-width: 44px; width: 44px; padding: 7px; flex-shrink: 0; }
+  .battle-focus .defense-help span { display: none; }
+  .battle-focus .spell-buttons { width: auto; flex: 1; min-width: 0; }
+  .battle-focus .spell-button { min-width: 0; }
+  .battle-focus .spell-button > span { display: none; }
+}
