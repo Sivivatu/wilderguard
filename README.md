@@ -8,7 +8,7 @@ A pixel-art tower-defense adventure through Elderglen: five places to free, five
 
 Wilderguard Beta (`com.wilderguard.game.beta`, version `0.1.0-beta.5`, versionCode 5) adds purchase confirmations, independently trained soldiers, larger wave text, and five distinct roads with approved pixelated photographic terrain. It includes the compact phone interface, tower/spell guide, and contagious level 3 Frost nova. It is separate from the original Android preview and does not import that preview's saved progress. Updates from an earlier beta preserve the beta's checkpoint saves. This is a developer-run repository, **not an app in F-Droid’s official catalog**. Anyone who has the public link can access its downloads; “unlisted” does not provide privacy or access control.
 
-**Beta 5's signed files were verified from the public release tag on 4 November 2026. GitHub Pages deployment is delayed by a GitHub service incident; the F-Droid feed still serves beta 4.** Download the [signed beta 5 APK](https://raw.githubusercontent.com/Sivivatu/wilderguard-beta/refs/tags/v0.1.0-beta.5/fdroid/repo/com.wilderguard.game.beta_5.apk) directly to update now. For F-Droid installation:
+**Beta 5's public page, signed feed, and APK were verified live on 4 November 2026.** Download the [signed beta 5 APK](https://sivivatu.github.io/wilderguard-beta/fdroid/repo/com.wilderguard.game.beta_5.apk) directly to update now. For F-Droid installation:
 
 1. [Install F-Droid](https://f-droid.org/F-Droid.apk) if it isn’t already on the device.
 2. Open the [Wilderguard Beta install page](https://sivivatu.github.io/wilderguard-beta/) on the tablet and tap **Add beta to F-Droid**. Confirm adding the repository in F-Droid.
@@ -16,7 +16,7 @@ Wilderguard Beta (`com.wilderguard.game.beta`, version `0.1.0-beta.5`, versionCo
 
 The install page includes the signing details. The app targets Android API 34, supports API 22 and newer with a modern WebView, and opens in landscape. Physical Tab S4 testing is pending. See [F-Droid beta notes](fdroid/README.md) for publisher and repository details.
 
-After the Pages deployment succeeds, refresh the repository in F-Droid for beta 5. All five signed APKs are retained in the published release tag; betas 1–4 remain unchanged and use the same permanent signing identity.
+The live feed recommends beta 5. Refresh the repository in F-Droid to update. All five signed APKs are retained; betas 1–4 remain unchanged and use the same permanent signing identity.
 
 ## Play
 
