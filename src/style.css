@@ -284,3 +284,24 @@ dialog { max-height: 90vh; max-height: 90dvh; overflow-y: auto; overscroll-behav
   .battle-focus .spell-button { min-width: 0; }
   .battle-focus .spell-button > span { display: none; }
 }
+
+/* Keep battlefield status readable at phone scale. */
+.map-caption { font-size: 12px; color: #30492c; background: #faf8e8ef; padding: 7px 10px; }
+.wave-label { font-size: 12px; color: #59654d; }
+.wave-label > strong { font-size: 14px; }
+.popover-soldiers { display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%; min-height: 44px; margin-bottom: 5px; border: 1px solid #b6c8a4; border-radius: 5px; color: #30543d; background: #edf1df; font-size: 12px; }
+.purchase-actions, .soldier-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+.purchase-actions .primary-button, .soldier-actions .primary-button { margin: 0; }
+.secondary-button { min-height: 44px; padding: 10px 16px; border: 1px solid #bac8a7; border-radius: 6px; color: #30543d; background: #edf1df; font-size: 12px; }
+#dialog-content .purchase-cost { color: #30543d; font-size: 15px; }
+.soldier-summary { padding: 12px; background: #edf1df; border-radius: 8px; margin-bottom: 15px; font-size: 14px; }
+.soldier-summary p, #dialog-content .soldier-note { font-size: 12px; line-height: 1.6; color: #53634b; }
+#dialog-content > p { color: #5a6850; }
+@media (max-height: 500px) and (orientation: landscape) {
+  .battle-focus .map-caption { font-size: 11px; padding: 6px 8px; }
+  .battle-focus .wave-label { font-size: 12px; }
+  .battle-focus .wave-label > strong { font-size: 13px; }
+  .battle-focus .tower-popover { padding: 7px 10px; }
+  .battle-focus .tower-popover > small { margin-bottom: 4px; }
+  .battle-focus .popover-stats { font-size: 10px; margin: 2px 0; }
+}

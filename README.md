@@ -20,17 +20,23 @@ The live feed recommends beta `0.1.0-beta.4`. Refresh the repository in F-Droid 
 
 ## Play
 
-Pick a tower, tap a marked place on the map, and start the wave when you’re ready. Archer towers fire quickly for 15 damage every 0.7 seconds at range 185. Cannons deal 35 damage every 1.65 seconds at range 170, and splash nearby enemies. Frost towers deal 8 damage every 0.8 seconds at range 165 and always slow a target by 50% for 2 seconds when they hit. Tap a built tower to see its level-specific damage, firing interval, range and upgrades, or open **Tower & spell guide** for all the details. Upgrades increase damage, range and speed; sell a tower for 60% of what you spent.
+The local beta 5 candidate adds confirmations, soldiers, distinct roads and larger status text. The published beta 4 above remains the working reference while terrain approval and the next release are completed.
+
+Pick a tower, tap a marked place on the map, confirm its diamond cost, and start the wave when you’re ready. Tower upgrades also ask for confirmation; canceling spends nothing and closing a dialog restores your previous pause state. Archer towers fire quickly for 15 damage every 0.7 seconds at range 185. Cannons deal 35 damage every 1.65 seconds at range 170, and splash nearby enemies. Frost towers deal 8 damage every 0.8 seconds at range 165 and always slow a target by 50% for 2 seconds when they hit. Tap a built tower to see its level-specific damage, firing interval, range and upgrades, or open **Tower & spell guide** for all the details. Upgrades increase damage, range and speed; sell a tower for 60% of what you spent.
 
 The guide is available by touch at any time, including when spells are disabled or empty. It explains that Deep Freeze slows the wave by 88% for 6 seconds, Starfall deals 110 damage to visible monsters in the first region (adding 25% of its base damage per region), and Mending Light restores 6 health up to 20. Descriptions and combat use the same stat calculations.
 
 Level 3 Frost towers unlock **Frost nova**: if a mob dies while its level 3 Frost chill is active, an icy blast slows living, visible mobs within 90 battlefield units by 50% for 2 seconds. Any tower or Starfall can trigger the burst; newly chilled mobs can spread it again if they die before the slow expires. The blast adds no damage. Levels 1 and 2 and Deep Freeze alone do not trigger Frost nova.
 
+Tap a built tower and choose **Soldiers** to send a two-soldier squad during a wave for 30 diamonds, once per tower per wave. Soldiers march out, block orcs and fight. Each survivor refunds 15 diamonds when the wave is cleared; fallen soldiers refund nothing. Train future squads separately from towers: level 1 has 50 health and 10 damage, level 2 has 80 health and 16 damage, and level 3 has 120 health and 24 damage. Soldiers attack every 0.8 seconds. Training upgrades cost 35 then 70 diamonds and carry between regions.
+
+Each region has a different road, shared by the renderer and combat rules. The battlefield status and wave counter use larger text while keeping the compact phone layout.
+
 Win diamonds after every wave. On wave 3, earn a Deep Freeze spell; on wave 5, earn Starfall. Mending Light restores kingdom health. After each region, receive an extra supply of **180 diamonds, plus 60 for each region you’ve already freed**, to help build the next defense line. Orcs grow stronger each wave across the campaign. Axe orcs join from wave 2, and an armored chieftain leads each region’s final wave.
 
 Pause, play at 2× speed, or use full screen to adjust how the game feels. In the Android app or when installed to your home screen, the game opens directly into a touch-friendly battle view. Progress saves on this device between waves; if monsters win, you can retry from your last saved setup. Your diamonds and spells carry to the next region, where you choose new towers.
 
-The battlefield and campaign map are drawn in Canvas and SVG. Orcs use pixelated artwork generated from the concept Eric selected. The game bundles all three sprites and the fonts, so battles also work offline. Wilderguard has no accounts, game server, tracking, advertising, or in-app purchases. The Samsung Galaxy Tab S4 in landscape is the target device.
+Each battlefield uses a distinct pixelated photographic background in the approved Sunburst style B, with its own road drawn in Canvas. The campaign map uses SVG. Orcs use pixelated artwork generated from the concept Eric selected. The game bundles all five backgrounds, three sprites and fonts, so battles also work offline. Wilderguard has no accounts, game server, tracking, advertising, or in-app purchases. The Samsung Galaxy Tab S4 in landscape is the target device.
 
 ## Play in a browser
 

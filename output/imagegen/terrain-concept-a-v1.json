@@ -1,0 +1,41 @@
+{
+  "generated_at_utc": "2026-11-01T15:50:00.695349+00:00",
+  "endpoint": "https://openrouter.ai/api/v1/images",
+  "prompt": "Use case: stylized-concept.\nAsset type: approval contact sheet for five landscape tower-defense game environments.\nPrimary request: Five distinct realistic natural terrain panels: top left green meadow farmland with dry stone walls near edges; top center dense ancient woodland with moss and ferns; top right arid amber rocky highlands; bottom left snowy icy mountain pass with frost-covered conifers; bottom right overgrown ruined citadel with weathered stone rubble and ivy. Layout exactly three equally sized landscape rectangular panels above two landscape rectangular panels. Each panel uses the same elevated top-down miniature game camera and natural realistic lighting. Frame each panel with thin neutral separation, no labels.\nComposition: Terrain only. Keep central playable ground mostly clear in each panel, with detailed trees, rocks and ruins concentrated near edges. Readable ground surfaces, believable organic materials and shadows. No horizon or sky. Natural photography translated to game terrain.\nConstraints: no roads or paths, no units, no monsters, no towers, no castle, no UI, no words, no text, no watermarks. Child-friendly adventure. Each region immediately recognizable by terrain and climate. Landscape contact sheet.\nStyle: photorealistic miniature terrain, rich photographic material detail, natural lighting, subtle square pixel texture. Real moss, grass, stones, ice, weathered masonry. Avoid flat vector shapes or cartoon illustration.",
+  "result": {
+    "model": "openai/gpt-image-2.5-sunburst",
+    "request": {
+      "aspect_ratio": "3:2",
+      "quality": "medium",
+      "n": 1,
+      "output_format": "png"
+    },
+    "http_status": 200,
+    "status": "ok",
+    "output_path": "/home/ubuntu/code/erics-game/output/imagegen/terrain-concept-a-v1.png",
+    "png_valid": true,
+    "width": 1536,
+    "height": 1024,
+    "size_bytes": 3901709,
+    "usage": {
+      "prompt_tokens": 279,
+      "completion_tokens": 343,
+      "total_tokens": 622,
+      "cost": 0.011685,
+      "is_byok": false,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "cost_details": {
+        "upstream_inference_cost": 0.011685,
+        "upstream_inference_prompt_cost": 0.001395,
+        "upstream_inference_completions_cost": 0.01029
+      },
+      "completion_tokens_details": {
+        "reasoning_tokens": 0,
+        "image_tokens": 343
+      }
+    },
+    "error": null
+  }
+}

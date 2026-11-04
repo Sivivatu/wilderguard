@@ -9,11 +9,13 @@ Description: |
 
   Defend Elderglen across five regions and 25 monster waves. Build Archer,
   Cannon, and Frost towers, upgrade your defenses, and earn diamonds and spells.
-  Play offline with touch controls designed for a landscape Android tablet.
+  Send soldiers from towers, train them separately and recover diamonds for
+  each survivor. Defend five distinct pixel-photo environments and roads.
+  Confirm purchases and play offline with compact landscape touch controls.
 
   This is an early beta in a developer-operated custom F-Droid repository.
   There are no accounts, advertising, tracking, or in-app purchases.
   Saved progress stays on the device. The beta installs separately from the
   original debug preview and does not import that preview's saved progress.
-CurrentVersion: 0.1.0-beta.4
-CurrentVersionCode: 4
+CurrentVersion: 0.1.0-beta.5
+CurrentVersionCode: 5

@@ -1,0 +1,52 @@
+{
+  "approved_style": "B",
+  "model": "openai/gpt-image-2.5-sunburst",
+  "conversion": "Center-fit to 1100x600, nearest-neighbor scaling, WebP quality92 method6",
+  "assets": [
+    {
+      "source": "output/imagegen/terrain-greenfields-final-v1.png",
+      "source_sha256": "cb12063958a75c5fb80fb54d6b5ea8c3a788176662de56bf630bdf3a07db5d67",
+      "bundled": "src/assets/terrain-greenfields.webp",
+      "bundled_sha256": "6402608c26b1a8ee17850113add6ffcba19001f0d4a561410892d480b1563466",
+      "width": 1100,
+      "height": 600,
+      "size_bytes": 387098
+    },
+    {
+      "source": "output/imagegen/terrain-woods-final-v1.png",
+      "source_sha256": "8169d78ce53ad517fff5c3269d49813f4b1868480b23fe45e949b1ea77bc6560",
+      "bundled": "src/assets/terrain-woods.webp",
+      "bundled_sha256": "271bbba3f3c9cb8fe0b27aedcf840d2f662b1da73a2f94ec23f14eb39d053b78",
+      "width": 1100,
+      "height": 600,
+      "size_bytes": 361878
+    },
+    {
+      "source": "output/imagegen/terrain-sunstone-final-v1.png",
+      "source_sha256": "92a81c9d890097acb2c5ed7474834068ceadd3050f5a9bf87aef61c8a403b402",
+      "bundled": "src/assets/terrain-sunstone.webp",
+      "bundled_sha256": "c5743d10a9acd86bdb8c1e369f17bfe50dd04ec4d2e3b4c61b7ac8616154890f",
+      "width": 1100,
+      "height": 600,
+      "size_bytes": 348746
+    },
+    {
+      "source": "output/imagegen/terrain-frostfall-final-v1.png",
+      "source_sha256": "72b3c09401213ceeea44d18c14f999ba83b56f48922b7bac43b8d0d2627427b6",
+      "bundled": "src/assets/terrain-frostfall.webp",
+      "bundled_sha256": "08d3c7a53197ccc8f26ef10e34f38483eccc424d25f1a2f07b42954ec971dbba",
+      "width": 1100,
+      "height": 600,
+      "size_bytes": 269730
+    },
+    {
+      "source": "output/imagegen/terrain-hollow-crown-final-v1.png",
+      "source_sha256": "f17e196c408bf8324e11249db4fa13cffc8df9304b4df0f038e6c0ba4da76da8",
+      "bundled": "src/assets/terrain-hollow-crown.webp",
+      "bundled_sha256": "2bccc868c672d312ff1cd0c95216cde50cac970a96b0ea9b1517f07f81f4dcb9",
+      "width": 1100,
+      "height": 600,
+      "size_bytes": 336136
+    }
+  ]
+}

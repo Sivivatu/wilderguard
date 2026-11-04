@@ -13,11 +13,23 @@ async function enterBattleFocus(page: Page) {
   await expect(page.locator('html')).toHaveClass(/battle-focus/);
 }
 
+async function confirmPurchaseIfShown(page: Page) {
+  const confirm = page.getByRole('button', { name: 'Confirm purchase' });
+  if (await confirm.isVisible().catch(() => false)) await confirm.click();
+}
+
 test('phone landscape keeps a large battlefield and reachable battle controls', async ({ browser }) => {
   for (const viewport of phoneLandscapes) {
     const context = await browser.newContext({ viewport, hasTouch: true, isMobile: true });
     const page = await context.newPage();
     await enterBattleFocus(page);
+
+    const statusSize = await page.locator('#map-status').evaluate(element => Number.parseFloat(getComputedStyle(element).fontSize));
+    const waveLabelSize = await page.locator('.wave-label').evaluate(element => Number.parseFloat(getComputedStyle(element).fontSize));
+    const waveCountSize = await page.locator('#wave-count').evaluate(element => Number.parseFloat(getComputedStyle(element).fontSize));
+    expect(statusSize, `map status text should be readable at ${viewport.width}x${viewport.height}`).toBeGreaterThanOrEqual(11);
+    expect(waveLabelSize, `wave label should be readable at ${viewport.width}x${viewport.height}`).toBeGreaterThanOrEqual(12);
+    expect(waveCountSize, `wave count should be readable at ${viewport.width}x${viewport.height}`).toBeGreaterThanOrEqual(12);
 
     const map = await page.locator('.map-container').boundingBox();
     expect(map, `${viewport.width}x${viewport.height} battlefield should be visible`).not.toBeNull();
@@ -41,6 +53,7 @@ test('phone landscape keeps a large battlefield and reachable battle controls', 
       const canvas = page.locator('#game-canvas');
       const canvasBox = (await canvas.boundingBox())!;
       await canvas.tap({ position: { x: canvasBox.width * 305 / 1100, y: canvasBox.height * 275 / 600 } });
+      await confirmPurchaseIfShown(page);
       const popover = page.locator('#tower-popover');
       await expect(popover).toBeVisible();
       const popoverBox = (await popover.boundingBox())!;
@@ -88,6 +101,7 @@ test('opening the guide during a wave pauses, and closing restores prior pause s
   const canvas = page.locator('#game-canvas');
   const box = (await canvas.boundingBox())!;
   await canvas.tap({ position: { x: box.width * 305 / 1100, y: box.height * 275 / 600 } });
+  await confirmPurchaseIfShown(page);
   await page.locator('#start-wave').click();
   const guide = page.getByRole('button', { name: 'Tower and ability details' });
   await guide.click();

@@ -26,6 +26,16 @@ describe('campaign saves', () => {
     expect(decoded?.towers).toEqual([{ ...game.towers[0], cooldown: 0 }]);
   });
 
+  it('saves campaign soldier training and defaults older saves to level one', () => {
+    const trained = { ...createGame(1, 438), soldierTrainingLevel: 3 } as GameState;
+    const decoded = decodeSave(encodeSave(trained));
+    expect(decoded).toMatchObject({ regionIndex: 1, soldierTrainingLevel: 3 });
+
+    const legacy = snapshot();
+    delete legacy.soldierTrainingLevel;
+    expect(decodeSave(JSON.stringify(legacy))).toMatchObject({ soldierTrainingLevel: 1 });
+  });
+
   it.each([null, '', '{broken json', 'null', '[]', '42'])('returns null for missing or malformed input %s', raw => {
     expect(decodeSave(raw)).toBeNull();
   });
@@ -40,6 +50,10 @@ describe('campaign saves', () => {
     ['excessive lives', { lives: 21 }],
     ['negative wave', { wave: -1 }],
     ['excessive wave', { wave: 6 }],
+    ['soldier training below level one', { soldierTrainingLevel: 0 }],
+    ['soldier training above level three', { soldierTrainingLevel: 4 }],
+    ['fractional soldier training', { soldierTrainingLevel: 1.5 }],
+    ['null soldier training', { soldierTrainingLevel: null }],
     ['negative kills', { kills: -1 }],
     ['missing inventory', { inventory: null }],
     ['negative spell count', { inventory: { meteor: -1, freeze: 0, heal: 0 } }],

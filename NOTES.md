@@ -19,9 +19,12 @@ Wilderguard tells that story across five places in Elderglen: The Greenfields, W
 - Archer: 15 damage every 0.7 seconds, range 185. Cannon: 35 damage every 1.65 seconds, range 170, with splash damage at less than 65 path units. Frost: 8 damage every 0.8 seconds, range 165; every hit slows its target by 50% for two seconds. Tower upgrades show their current damage, interval, and range.
 - Deep Freeze slows the full wave by 88% for six seconds. Starfall damages every visible enemy for 110 in Greenfields, adding 25% of its base damage per region. Mending Light restores six health, up to 20.
 - Level 3 Frost towers unlock Frost nova in beta 4. A mob killed during the tower's two-second chill triggers a 90-unit area burst that spreads the same 50% slow for two seconds. Any tower or Starfall kill can trigger it, and newly chilled mobs can spread it again while their chill lasts. The burst adds no damage; lower Frost levels and Deep Freeze alone do not trigger it.
+- Confirmations for tower construction, tower upgrades, troop deployment and training; clearer wave/status text on phones.
+- Five distinct region roads used by enemy movement, tower targeting, Frost nova and soldiers.
+- Two-soldier squads cost 30 diamonds per tower per wave. Each surviving soldier refunds 15 after a successful wave. Campaign training upgrades cost 35/70 diamonds and improve future squads independently of tower upgrades.
 - A local checkpoint between waves so a retry restores the last saved setup.
 - An offline browser build, an original Android debug preview, and a separate unlisted F-Droid beta built with Capacitor 6.
-- Procedural Canvas and SVG scenery, locally bundled pixel-art orc sprites, and bundled fonts with their license files.
+- Five locally bundled Sunburst pixel-photo terrain backgrounds in approved style B, distinct Canvas roads, pixel-art orc sprites, and bundled fonts with their license files.
 
 The unlisted beta is distributed through a public developer-operated feed rather than F-Droid’s official catalog. Anyone with its link can access the public APK and repository files; the link provides no access control or privacy. The separate beta app does not import progress from the original debug preview. There are no game accounts, game servers, tracking, advertising, or in-app purchases. Save data stays on the device. A small post-install script checks and patches a known Capacitor 6 and `tar` 7 compatibility issue. Run `npm audit` before a release and review any new development-tool advisories.
 
@@ -61,3 +64,9 @@ Beta `0.1.0-beta.4` (versionCode 4) is published and recommended in both signed 
 
 
 Validation for beta 4: 75 unit tests, 99.28% line coverage and 98.95% branch coverage in the configured game/save/art modules, 15 browser tests, 18 release-helper tests, and a successful Android beta build. Code and security reviews found no critical or high issues. Four existing moderate development-tool advisories remain; no dependencies changed. Physical Android and F-Droid client update testing remain pending.
+
+## Regions and soldiers — beta 5 candidate
+
+Local development adds purchase confirmations, larger wave/status text, five distinct region routes and independently trained tower soldiers. Squads cost 30 diamonds; each survivor returns 15 at wave end. Training costs 35 then 70 diamonds and persists in the existing save format, with older saves defaulting to level 1. A squad's combat and refunds share the ordinary wave resolver, including Frost nova kills.
+
+The beta 4 source tag is retained unchanged. Two Sunburst terrain concepts were generated for approval with the existing OpenCode/OpenRouter key; provenance is in `output/imagegen/terrain-concept-*-v1.json`. The user accepted B; five individual matching backgrounds are now bundled offline. Beta 5 is a local candidate, not yet the public F-Droid recommendation. See [test evidence](docs/testing/regions-soldiers.tdd.md).

@@ -4,6 +4,8 @@ import { advanceRegion, buildTower, createGame, MAX_TOWER_LEVEL, REGIONS, sellTo
 import { GameRenderer, drawTower } from './render';
 import { loadGame, saveGame, SPELL_NAMES } from './save';
 import { defenseGuide, towerSummary } from './defense-guide';
+import { deploySoldiers, trainSoldiers, soldierStats, trainingCost, SOLDIERS } from './soldiers';
+import { soldierGuide } from './soldier-guide';
 import './style.css';
 
 const isInstalled = () => Capacitor.isNativePlatform() || window.matchMedia('(display-mode: standalone)').matches;
@@ -108,8 +110,8 @@ function updateUI() {
   get('campaign-progress').style.width = `${liberated / 25 * 100}%`;
   get('region-list').innerHTML = REGIONS.map((region, i) => `<button class="region-card ${i === state.regionIndex ? 'current' : ''} ${i < state.regionIndex ? 'liberated' : ''}" data-region="${i}" ${i === state.regionIndex ? 'aria-current="location"' : ''}><span class="region-number">${i < state.regionIndex ? icon('check') : `0${i + 1}`}</span><span><strong>${region.name}</strong><small>${i < state.regionIndex ? 'Liberated' : i === state.regionIndex ? `${clearedWaves} of 5 waves cleared` : 'Uncharted territory'}</small></span>${icon(i <= state.regionIndex ? 'chevron-right' : 'lock-keyhole')}</button>`).join('');
   get('wave-dots').innerHTML = Array.from({ length: 5 }, (_, i) => `<span class="wave-dot ${i < state.wave && (state.phase !== 'wave' || i < state.wave - 1) ? 'complete' : i === state.wave - 1 && state.phase === 'wave' ? 'in-progress' : ''}" title="Wave ${i + 1}">${i < state.wave && (state.phase !== 'wave' || i < state.wave - 1) ? icon('check') : i + 1}</span>`).join('');
-  get('map-status').textContent = renderer.artworkStatus === 'error' ? 'Orc artwork could not load. Reload to try again.' : state.phase === 'wave' ? (paused ? 'Adventure paused' : `${state.enemies.length} monsters on the march`) : state.phase === 'reward' ? 'A brave stand. A well-earned breath.' : state.phase === 'victory' ? 'This land is free again.' : state.phase === 'defeat' ? 'Every adventure has another beginning.' : 'A quiet meadow. For now.';
-  get('wave-instruction').textContent = state.phase === 'wave' ? 'Hold the line. Your towers have this.' : state.phase === 'reward' ? (state.reward ? `Wave cleared! +${state.reward.diamonds} diamonds${state.reward.item ? ` + ${SPELL_NAMES[state.reward.item]}` : ''}` : 'Wave cleared. Your next stand awaits.') : state.phase === 'victory' ? 'Five brave stands. One place brought home.' : state.phase === 'defeat' ? 'Regroup, rebuild, and try again.' : 'The first wave is on its way. Get ready.';
+  get('map-status').textContent = renderer.artworkStatus === 'error' ? renderer.artworkError : state.phase === 'wave' ? (paused ? 'Adventure paused' : `${state.enemies.length} monsters on the march`) : state.phase === 'reward' ? 'A brave stand. A well-earned breath.' : state.phase === 'victory' ? 'This land is free again.' : state.phase === 'defeat' ? 'Every adventure has another beginning.' : `${REGIONS[state.regionIndex].biome}: build your defenses.`;
+  get('wave-instruction').textContent = state.phase === 'wave' ? 'Hold the line. Your towers have this.' : state.phase === 'reward' ? (state.reward ? `Wave cleared! +${state.reward.diamonds} diamonds${state.reward.item ? ` + ${SPELL_NAMES[state.reward.item]}` : ''}${state.reward.soldierRefund ? ` · ${state.reward.soldierRefund} soldier refund` : ''}` : 'Wave cleared. Your next stand awaits.') : state.phase === 'victory' ? 'Five brave stands. One place brought home.' : state.phase === 'defeat' ? 'Regroup, rebuild, and try again.' : 'The first wave is on its way. Get ready.';
   get('map-hint').hidden = state.towers.length > 0 || state.phase !== 'preparing';
   const start = get<HTMLButtonElement>('start-wave'); const fighting = state.phase === 'wave';
   start.disabled = fighting || state.phase === 'defeat' || renderer.artworkStatus !== 'ready';
@@ -136,14 +138,14 @@ function updatePopover() {
   const slot = SLOTS.find(candidate => candidate.id === selectedSlot)!;
   popover.style.left = `${Math.min(79, Math.max(15, slot.x / 1100 * 100))}%`;
   popover.style.top = `${Math.min(71, Math.max(18, slot.y / 600 * 100 - 19))}%`;
-  popover.innerHTML = `<div><strong>${TOWER_TYPES[tower.type].name}</strong><button class="tiny-close" data-action="deselect" aria-label="Close tower details">${icon('x')}</button></div><small>LEVEL ${tower.level} / ${MAX_TOWER_LEVEL}</small><p class="popover-stats">${towerSummary(tower.type, tower.level)}</p><button class="popover-guide" data-dialog="defenses">Strengths &amp; abilities ${icon('circle-help')}</button><div><button data-action="upgrade" ${tower.level === MAX_TOWER_LEVEL || state.diamonds < upgradeCost(tower) ? 'disabled' : ''}>${icon('arrow-up')} ${tower.level === MAX_TOWER_LEVEL ? 'Max level' : `Upgrade · ${upgradeCost(tower)} ${icon('gem')}`}</button><button class="sell-button" data-action="sell" aria-label="Sell tower for 60 percent refund">${icon('trash-2')}</button></div>`;
+  popover.innerHTML = `<div><strong>${TOWER_TYPES[tower.type].name}</strong><button class="tiny-close" data-action="deselect" aria-label="Close tower details">${icon('x')}</button></div><small>LEVEL ${tower.level} / ${MAX_TOWER_LEVEL}</small><p class="popover-stats">${towerSummary(tower.type, tower.level)}</p><button class="popover-guide" data-dialog="defenses">Strengths &amp; abilities ${icon('circle-help')}</button><button class="popover-soldiers" data-action="soldiers">${icon('swords')} Soldiers</button><div><button data-action="upgrade" ${tower.level === MAX_TOWER_LEVEL || state.diamonds < upgradeCost(tower) ? 'disabled' : ''}>${icon('arrow-up')} ${tower.level === MAX_TOWER_LEVEL ? 'Max level' : `Upgrade · ${upgradeCost(tower)} ${icon('gem')}`}</button><button class="sell-button" data-action="sell" aria-label="Sell tower for 60 percent refund">${icon('trash-2')}</button></div>`;
 }
 function updateResult() {
   const overlay = get('result-overlay');
   overlay.hidden = !['defeat', 'victory'].includes(state.phase);
   if (overlay.hidden) return;
   const won = state.phase === 'victory'; const final = state.regionIndex === REGIONS.length - 1;
-  overlay.innerHTML = `<span class="result-icon">${icon(won ? 'trophy' : 'shield')}</span><span class="eyebrow">${won ? 'A LITTLE BRAVERY GOES A LONG WAY' : 'THIS STORY ISN’T OVER'}</span><h2>${won ? final ? 'The wild is home again.' : 'A place worth protecting.' : 'Even heroes regroup.'}</h2><p>${won ? `${REGIONS[state.regionIndex].name} is free. ${final ? 'All 25 waves conquered. Eric’s kingdom is safe!' : 'Pack your courage. The next region needs you.'}` : 'The monsters got through. Try more towers, upgrades, or a well-timed spell.'}</p>${won && state.reward ? `<div class="result-rewards">${icon('gem')} +${state.reward.diamonds} diamonds <span>·</span> ${icon('sparkles')} +1 Starfall</div>` : ''}<button class="primary-button" data-action="${won ? final ? 'new-campaign' : 'advance' : 'retry'}">${won ? final ? 'Another adventure' : 'Explore the next region' : 'Try this wave again'} ${icon('arrow-right')}</button>`;
+  overlay.innerHTML = `<span class="result-icon">${icon(won ? 'trophy' : 'shield')}</span><span class="eyebrow">${won ? 'A LITTLE BRAVERY GOES A LONG WAY' : 'THIS STORY ISN’T OVER'}</span><h2>${won ? final ? 'The wild is home again.' : 'A place worth protecting.' : 'Even heroes regroup.'}</h2><p>${won ? `${REGIONS[state.regionIndex].name} is free. ${final ? 'All 25 waves conquered. Eric’s kingdom is safe!' : 'Pack your courage. The next region needs you.'}` : 'The monsters got through. Try more towers, upgrades, or a well-timed spell.'}</p>${won && state.reward ? `<div class="result-rewards">${icon('gem')} +${state.reward.diamonds} diamonds <span>·</span> ${icon('sparkles')} +1 Starfall</div>` : ''}${won && state.reward?.soldierRefund ? `<p class="soldier-refund">${state.reward.soldierRefund} diamonds refunded for surviving soldiers</p>` : ''}<button class="primary-button" data-action="${won ? final ? 'new-campaign' : 'advance' : 'retry'}">${won ? final ? 'Another adventure' : 'Explore the next region' : 'Try this wave again'} ${icon('arrow-right')}</button>`;
 }
 function nextRegion() {
   if (state.regionIndex === REGIONS.length - 1) { showDialog('completed'); return; }
@@ -160,9 +162,10 @@ canvas.addEventListener('click', event => {
   if (paused || ['defeat', 'victory'].includes(state.phase)) return;
   const slotId = renderer.getSlot(event.clientX, event.clientY); selectedSlot = slotId;
   if (slotId && !state.towers.some(tower => tower.slotId === slotId)) {
-    const next = buildTower(state, slotId, selectedType);
-    if (next === state) toast(`You need ${TOWER_TYPES[selectedType].cost} diamonds for this tower.`);
-    else { state = next; playSound('build'); persist(); toast(`${TOWER_TYPES[selectedType].name} ready. Tap it to upgrade.`); }
+    const type = selectedType; const cost = TOWER_TYPES[type].cost;
+    if (state.diamonds < cost) toast(`You need ${cost} diamonds for this tower.`);
+    else requestPurchase({ heading: `Build ${TOWER_TYPES[type].name}?`, cost,
+      detail: towerSummary(type, 1), apply: current => buildTower(current, slotId, type) });
   }
   updateUI();
 });
@@ -187,18 +190,69 @@ app.addEventListener('click', event => {
   if (action === 'new-campaign') showDialog('restart');
   if (action === 'restart-confirm') { state = createGame(); checkpoint = state; selectedSlot = null; paused = false; wasPausedBeforeDialog = false; persist(); get<HTMLDialogElement>('game-dialog').close(); updateUI(); }
   if (action === 'deselect') { selectedSlot = null; updateUI(); }
+  if (action === 'confirm-purchase') confirmPurchase();
+  if (action === 'cancel-purchase') {
+    const returnToSoldiers = pendingPurchase?.returnToSoldiers; pendingPurchase = null;
+    if (returnToSoldiers) showDialog('soldiers'); else dialog.close();
+  }
+  if (action === 'soldiers') showDialog('soldiers');
+  if (action === 'train-soldiers' || action === 'deploy-soldiers') requestSoldierPurchase(action);
   if (action === 'upgrade' || action === 'sell') {
     const tower = state.towers.find(t => t.slotId === selectedSlot); if (!tower || paused) return;
-    const next = action === 'upgrade' ? upgradeTower(state, tower.id) : sellTower(state, tower.id);
-    if (next !== state) { state = next; if (action === 'sell') selectedSlot = null; playSound('build'); persist(); updateUI(); }
+    if (action === 'upgrade') {
+      const level = tower.level; const cost = upgradeCost(tower);
+      requestPurchase({ heading: `Upgrade ${TOWER_TYPES[tower.type].name}?`, cost,
+        detail: `Level ${level} → ${level + 1}. ${towerSummary(tower.type, level + 1)}`,
+        apply: current => current.towers.find(t => t.id === tower.id)?.level === level ? upgradeTower(current, tower.id) : current });
+    } else {
+      const next = sellTower(state, tower.id);
+      if (next !== state) { state = next; selectedSlot = null; playSound('build'); persist(); updateUI(); }
+    }
   }
 });
 const dialog = get<HTMLDialogElement>('game-dialog');
 let wasPausedBeforeDialog = false;
+interface Purchase {
+  heading: string; cost: number; detail: string; returnToSoldiers?: boolean;
+  apply: (current: GameState) => GameState;
+}
+let pendingPurchase: Purchase | null = null;
+function requestPurchase(purchase: Purchase) {
+  pendingPurchase = purchase; showDialog('purchase');
+}
+function confirmPurchase() {
+  const purchase = pendingPurchase;
+  if (!purchase) return;
+  pendingPurchase = null;
+  const next = state.diamonds >= purchase.cost ? purchase.apply(state) : state;
+  if (next === state) toast('This purchase is no longer available. No diamonds spent.');
+  else { state = next; playSound('build'); persist(); }
+  if (purchase.returnToSoldiers) showDialog('soldiers'); else dialog.close();
+  updateUI();
+}
+function requestSoldierPurchase(action: string) {
+  const tower = state.towers.find(t => t.slotId === selectedSlot);
+  if (!tower || !dialog.open) return;
+  if (action === 'deploy-soldiers') requestPurchase({ heading: 'Deploy soldiers?', cost: SOLDIERS.deployCost,
+    detail: 'Send 2 soldiers from this tower. Each survivor refunds 15 diamonds after the wave.', returnToSoldiers: true,
+    apply: current => deploySoldiers(current, tower.id) });
+  else {
+    const level = state.soldierTrainingLevel; const stats = soldierStats(level + 1);
+    requestPurchase({ heading: 'Train soldiers?', cost: trainingCost(level), returnToSoldiers: true,
+      detail: `Train future squads to level ${level + 1}: ${stats.hp} health and ${stats.damage} damage per soldier. Training carries between regions.`,
+      apply: current => current.soldierTrainingLevel === level ? trainSoldiers(current) : current });
+  }
+}
 function showDialog(type: string) {
   if (!dialog.open) { wasPausedBeforeDialog = paused; paused = true; }
   const content = get('dialog-content');
-  if (type === 'settings') content.innerHTML = `<span class="dialog-badge">${icon('settings')}</span><span class="eyebrow">MAKE YOURSELF AT HOME</span><h2>Camp settings</h2><p>Your progress saves between waves on this device.</p><button class="setting-row" id="toggle-sound">${icon(soundEnabled ? 'volume-2' : 'volume-x')}<span>Gentle game sounds</span><strong>${soundEnabled ? 'On' : 'Off'}</strong></button><button class="setting-row" data-dialog="guide">${icon('book-open')}<span>How to play</span>${icon('chevron-right')}</button><button class="setting-row" data-dialog="defenses">${icon('swords')}<span>Tower and ability details</span>${icon('chevron-right')}</button><button class="setting-row" data-dialog="campaign">${icon('map')}<span>Campaign map</span>${icon('chevron-right')}</button><button class="setting-row" data-action="new-campaign">${icon('rotate-ccw')}<span>Start a new adventure</span>${icon('chevron-right')}</button><div class="creator-note">Made by <strong>Eric, a 7-year-old boy.</strong><br>A big adventure from a little imagination.</div>`;
+  if (type === 'purchase' && pendingPurchase) content.innerHTML = `<h2>${pendingPurchase.heading}</h2><p>${pendingPurchase.detail}</p><p class="purchase-cost">Cost: <strong>${pendingPurchase.cost} diamonds</strong></p><div class="purchase-actions"><button class="primary-button" data-action="confirm-purchase">Confirm purchase</button><button class="secondary-button" data-action="cancel-purchase">Cancel purchase</button></div>`;
+  else if (type === 'soldiers') {
+    const tower = state.towers.find(t => t.slotId === selectedSlot);
+    if (!tower) { dialog.close(); return; }
+    content.innerHTML = soldierGuide(state, tower.id);
+  }
+  else if (type === 'settings') content.innerHTML = `<span class="dialog-badge">${icon('settings')}</span><span class="eyebrow">MAKE YOURSELF AT HOME</span><h2>Camp settings</h2><p>Your progress saves between waves on this device.</p><button class="setting-row" id="toggle-sound">${icon(soundEnabled ? 'volume-2' : 'volume-x')}<span>Gentle game sounds</span><strong>${soundEnabled ? 'On' : 'Off'}</strong></button><button class="setting-row" data-dialog="guide">${icon('book-open')}<span>How to play</span>${icon('chevron-right')}</button><button class="setting-row" data-dialog="defenses">${icon('swords')}<span>Tower and ability details</span>${icon('chevron-right')}</button><button class="setting-row" data-dialog="campaign">${icon('map')}<span>Campaign map</span>${icon('chevron-right')}</button><button class="setting-row" data-action="new-campaign">${icon('rotate-ccw')}<span>Start a new adventure</span>${icon('chevron-right')}</button><div class="creator-note">Made by <strong>Eric, a 7-year-old boy.</strong><br>A big adventure from a little imagination.</div>`;
   else if (type === 'restart') content.innerHTML = `<span class="dialog-badge">${icon('rotate-ccw')}</span><h2>A fresh adventure?</h2><p>This replaces the campaign saved on this device and returns you to the Greenfields with 120 diamonds.</p><button class="primary-button" data-action="restart-confirm">Start from the beginning ${icon('arrow-right')}</button>`;
   else if (type === 'defenses') content.innerHTML = defenseGuide(state.regionIndex);
   else if (type === 'campaign' || type === 'completed') content.innerHTML = `<span class="dialog-badge">${icon('map')}</span><span class="eyebrow">EVERY PLACE IS WORTH PROTECTING</span><h2>The road through Elderglen</h2><p>Five regions. Five waves each. Clear a region to journey onward with your diamonds and spells. Each new place needs a fresh set of towers.</p>${REGIONS.map((region, index) => `<div class="guide-row"><span class="guide-symbol">${icon(regionIcons[index])}</span><div><strong>${index + 1}. ${region.name}</strong><p>${region.difficulty} · ${index < state.regionIndex || index === state.regionIndex && state.phase === 'victory' ? 'Liberated' : index === state.regionIndex ? 'Your current stand' : 'Waiting to be freed'}</p></div></div>`).join('')}`;
@@ -210,7 +264,7 @@ get('settings').addEventListener('click', () => showDialog('settings'));
 get('battle-menu').addEventListener('click', () => showDialog('settings'));
 dialog.querySelector('.dialog-close')!.addEventListener('click', () => dialog.close());
 dialog.addEventListener('click', event => { if (event.target === dialog) { const r = dialog.getBoundingClientRect(); if (event.clientX < r.left || event.clientX > r.right || event.clientY < r.top || event.clientY > r.bottom) dialog.close(); } });
-dialog.addEventListener('close', () => { paused = wasPausedBeforeDialog; updateUI(); });
+dialog.addEventListener('close', () => { pendingPurchase = null; paused = wasPausedBeforeDialog; updateUI(); });
 document.addEventListener('visibilitychange', () => { if (document.hidden && state.phase === 'wave') setPaused(true); });
 document.addEventListener('keydown', event => {
   if (dialog.open || (event.target as HTMLElement).tagName === 'BUTTON') return;
@@ -232,7 +286,7 @@ function frame(timestamp: number) {
   requestAnimationFrame(frame);
 }
 void renderer.ready.then(() => updateUI()).catch(() => {
-  updateUI(); toast('Orc artwork could not load. Reload to try again.');
+  updateUI(); toast(renderer.artworkError);
 });
 updateUI(); persist(); requestAnimationFrame(frame);
 if ('serviceWorker' in navigator && import.meta.env.PROD) navigator.serviceWorker.register('/sw.js').catch(error => { console.warn('Offline cache could not be installed.', error); });

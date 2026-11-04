@@ -4,6 +4,13 @@ async function buildAt(page: import('@playwright/test').Page, x: number, y: numb
   const canvas = page.locator('#game-canvas');
   const box = (await canvas.boundingBox())!;
   await canvas.click({ position: { x: box.width * x / 1100, y: box.height * y / 600 } });
+  const confirm = page.getByRole('button', { name: 'Confirm purchase' });
+  if (await confirm.isVisible().catch(() => false)) await confirm.click();
+}
+
+async function confirmUpgradeIfShown(page: import('@playwright/test').Page) {
+  const confirm = page.getByRole('button', { name: 'Confirm purchase' });
+  if (await confirm.isVisible().catch(() => false)) await confirm.click();
 }
 
 test('build, upgrade, sell and restore a saved defense', async ({ page }) => {
@@ -15,6 +22,7 @@ test('build, upgrade, sell and restore a saved defense', async ({ page }) => {
   await expect(page.locator('#diamond-count')).toHaveText('50');
   await expect(page.locator('#tower-popover')).toBeVisible();
   await page.getByRole('button', { name: /Upgrade · 49/ }).click();
+  await confirmUpgradeIfShown(page);
   await expect(page.locator('#diamond-count')).toHaveText('1');
   await page.reload();
   await expect(page.locator('#diamond-count')).toHaveText('1');
@@ -72,6 +80,7 @@ test('tablet and phone layouts fit, touch placement works', async ({ browser }) 
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     const box = (await page.locator('#game-canvas').boundingBox())!;
     await page.touchscreen.tap(box.x + box.width * 305 / 1100, box.y + box.height * 275 / 600);
+    await page.getByRole('button', { name: 'Confirm purchase' }).click();
     await expect(page.locator('#diamond-count')).toHaveText('50');
     await context.close();
   }

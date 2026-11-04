@@ -1,3 +1,4 @@
+import { SOLDIERS } from './soldiers';
 import { createGame, getWaveReward, MAX_TOWER_LEVEL, REGIONS, SLOTS, type GameState, type Spell, type TowerType } from './game';
 const SAVE_KEY = 'wilderguard-campaign-v1';
 const isInteger = (value: unknown, max: number): value is number => Number.isInteger(value) && Number(value) >= 0 && Number(value) <= max;
@@ -5,7 +6,7 @@ const isRecord = (value: unknown): value is Record<string, unknown> => typeof va
 export function encodeSave(state: GameState): string | null {
   if (state.phase === 'wave' || state.phase === 'defeat') return null;
   return JSON.stringify({ version: 1, regionIndex: state.regionIndex, diamonds: state.diamonds,
-    lives: state.lives, wave: state.wave, towers: state.towers, inventory: state.inventory, kills: state.kills });
+    lives: state.lives, wave: state.wave, towers: state.towers, inventory: state.inventory, kills: state.kills, soldierTrainingLevel: state.soldierTrainingLevel });
 }
 export function decodeSave(raw: string | null): GameState | null {
   if (!raw || raw.length > 16384) return null;
@@ -13,6 +14,8 @@ export function decodeSave(raw: string | null): GameState | null {
     const data: unknown = JSON.parse(raw);
     if (!isRecord(data) || data.version !== 1 || !isInteger(data.regionIndex, REGIONS.length - 1) || !isInteger(data.diamonds, 1000000)
       || !isInteger(data.lives, 20) || data.lives === 0 || !isInteger(data.wave, 5) || !isInteger(data.kills, 1000000)) return null;
+    const training = data.soldierTrainingLevel === undefined ? 1 : data.soldierTrainingLevel;
+    if (!isInteger(training, SOLDIERS.maxLevel) || training === 0) return null;
     if (!isRecord(data.inventory) || !['meteor', 'freeze', 'heal'].every(spell => isInteger((data.inventory as Record<string, unknown>)[spell], 1000))) return null;
     if (!Array.isArray(data.towers) || data.towers.length > SLOTS.length) return null;
     const seen = new Set<number>();
@@ -23,7 +26,7 @@ export function decodeSave(raw: string | null): GameState | null {
       seen.add(tower.slotId); return true;
     });
     if (!valid) return null;
-    return { ...createGame(data.regionIndex, data.diamonds), lives: data.lives, wave: data.wave,
+    return { ...createGame(data.regionIndex, data.diamonds), lives: data.lives, wave: data.wave, soldierTrainingLevel: training,
       phase: data.wave === 5 ? 'victory' : data.wave === 0 ? 'preparing' : 'reward', kills: data.kills,
       reward: data.wave > 0 ? getWaveReward(data.regionIndex, data.wave) : null,
       inventory: { meteor: data.inventory.meteor as number, freeze: data.inventory.freeze as number, heal: data.inventory.heal as number },

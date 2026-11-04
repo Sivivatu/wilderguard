@@ -1,0 +1,42 @@
+{
+  "generated_at_utc": "2026-11-04T09:20:22.755284+00:00",
+  "endpoint": "https://openrouter.ai/api/v1/images",
+  "approved_style": "terrain-concept-b-v1.png",
+  "prompt": "Use case: stylized-concept. Asset type: final offline landscape tower-defense game terrain background.\nStyle: pixelated photographic terrain matching an approved photographed-miniature pixel-art concept. Realistic material textures and natural lighting converted into crisp clearly visible square pixels, chunky shading clusters and nearest-neighbor edges. Avoid vector shapes, smooth painted cartoon surfaces, blur or airbrush.\nCamera and composition: one complete wide landscape environment, elevated top-down miniature game camera, nearly overhead so ground occupies the whole frame. No horizon or sky. Broad continuous playable ground across the central 90 percent of the image. All tall trees, walls, buildings, rocks and cliffs must stay at the very outer fringe (top 12 percent, bottom 8 percent, left/right 4 percent). The entire interior is traversable ground; keep it textured and detailed with small flat natural material patterns but no obstacles. The game overlays a winding road, towers and soldiers later. Consistent camera and object scale for all regions.\nConstraints: terrain only; no road, no path, no units, no people, no monsters, no towers, no castle, no UI, no labels, no text, no watermark, no panel borders. Child-friendly natural adventure. Single image, not a contact sheet.\nRegion: Overgrown ruined citadel courtyard: aged cracked stone paving mixed with grass and moss; ivy-covered crumbling walls and broken arches framing only the far perimeter. Natural daylight.",
+  "result": {
+    "model": "openai/gpt-image-2.5-sunburst",
+    "request": {
+      "aspect_ratio": "16:9",
+      "quality": "medium",
+      "n": 1,
+      "output_format": "png"
+    },
+    "http_status": 200,
+    "status": "ok",
+    "output_path": "/home/ubuntu/code/erics-game/output/imagegen/terrain-hollow-crown-final-v1.png",
+    "png_valid": true,
+    "width": 1536,
+    "height": 864,
+    "size_bytes": 3042540,
+    "usage": {
+      "prompt_tokens": 296,
+      "completion_tokens": 280,
+      "total_tokens": 576,
+      "cost": 0.00988,
+      "is_byok": false,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "cost_details": {
+        "upstream_inference_cost": 0.00988,
+        "upstream_inference_prompt_cost": 0.00148,
+        "upstream_inference_completions_cost": 0.0084
+      },
+      "completion_tokens_details": {
+        "reasoning_tokens": 0,
+        "image_tokens": 280
+      }
+    },
+    "error": null
+  }
+}

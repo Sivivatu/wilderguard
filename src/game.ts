@@ -1,15 +1,19 @@
+import { BUILD_SLOTS, pathForRegion, pathLengthForRegion, pointOnRegionPath } from './region-geometry';
+import { settleSoldiers, tickSoldiers, type Soldier, type Deployment } from './soldiers';
+
 export type TowerType = 'archer' | 'cannon' | 'frost';
 export type Spell = 'meteor' | 'freeze' | 'heal';
 export type Phase = 'preparing' | 'wave' | 'reward' | 'defeat' | 'victory';
 export interface Point { x: number; y: number }
 export interface Tower { id: string; slotId: number; type: TowerType; level: number; cooldown: number }
-export interface Enemy { id: number; distance: number; hp: number; maxHp: number; speed: number; kind: 'clubber' | 'axeman' | 'chieftain'; slow: number; frostNovaTime?: number }
+export interface Enemy { id: number; distance: number; hp: number; maxHp: number; speed: number; kind: 'clubber' | 'axeman' | 'chieftain'; slow: number; frostNovaTime?: number; engaged?: boolean; meleeCooldown?: number }
 export interface Shot { from: Point; to: Point; type: TowerType; life: number }
 export interface FrostBurst { position: Point; life: number }
 export interface GameState {
   regionIndex: number; diamonds: number; lives: number; wave: number; phase: Phase;
   towers: Tower[]; enemies: Enemy[]; shots: Shot[]; frostBursts: FrostBurst[]; inventory: Record<Spell, number>;
-  reward: { diamonds: number; item: Spell | null } | null;
+  reward: { diamonds: number; item: Spell | null; soldierRefund?: number } | null;
+  soldierTrainingLevel: number; soldiers: Soldier[]; deployments: Deployment[];
   elapsed: number; freezeTime: number; kills: number;
 }
 export const WAVES_PER_REGION = 5;
@@ -33,34 +37,18 @@ export function towerStats(type: TowerType, level: number) {
   return { damage: base.damage * (1 + (level - 1) * .7), range: base.range + (level - 1) * 15, interval: base.interval / (1 + (level - 1) * .15) };
 }
 export function meteorDamage(regionIndex: number) { return 110 * (1 + regionIndex * .25); }
-export const SLOTS = [
-  { id: 1, x: 305, y: 275 }, { id: 2, x: 165, y: 205 }, { id: 3, x: 365, y: 425 },
-  { id: 4, x: 550, y: 285 }, { id: 5, x: 725, y: 335 }, { id: 6, x: 870, y: 330 },
-  { id: 7, x: 920, y: 500 }, { id: 8, x: 485, y: 165 },
-];
-export const PATH: Point[] = [
-  { x: -45, y: 310 }, { x: 175, y: 310 }, { x: 245, y: 250 }, { x: 245, y: 170 },
-  { x: 355, y: 170 }, { x: 420, y: 230 }, { x: 420, y: 355 }, { x: 525, y: 390 },
-  { x: 620, y: 350 }, { x: 650, y: 235 }, { x: 755, y: 210 }, { x: 805, y: 285 },
-  { x: 790, y: 410 }, { x: 895, y: 445 }, { x: 1060, y: 415 },
-];
-const SEGMENTS = PATH.slice(1).map((point, index) => Math.hypot(point.x - PATH[index].x, point.y - PATH[index].y));
-export const PATH_LENGTH = SEGMENTS.reduce((sum, length) => sum + length, 0);
-export function pointOnPath(distance: number): Point {
-  let remaining = Math.max(0, distance);
-  for (let index = 0; index < SEGMENTS.length; index += 1) {
-    if (remaining <= SEGMENTS[index]) {
-      const fraction = remaining / SEGMENTS[index];
-      return { x: PATH[index].x + (PATH[index + 1].x - PATH[index].x) * fraction, y: PATH[index].y + (PATH[index + 1].y - PATH[index].y) * fraction };
-    }
-    remaining -= SEGMENTS[index];
-  }
-  return { ...PATH[PATH.length - 1] };
+export const SLOTS = BUILD_SLOTS;
+// Preserve the original route exports for saved campaigns and tooling.
+export const PATH = pathForRegion(0);
+export const PATH_LENGTH = pathLengthForRegion(0);
+export function pointOnPath(distance: number, regionIndex = 0): Point {
+  return pointOnRegionPath(regionIndex, distance);
 }
 export function createGame(regionIndex = 0, diamonds = 120): GameState {
   return {
     regionIndex: Math.min(REGIONS.length - 1, Math.max(0, Math.floor(regionIndex) || 0)),
     diamonds: Number.isFinite(diamonds) ? Math.max(0, Math.floor(diamonds)) : 120,
+    soldierTrainingLevel: 1, soldiers: [], deployments: [],
     lives: 20, wave: 0, phase: 'preparing', towers: [], enemies: [], shots: [], frostBursts: [],
     inventory: { meteor: 1, freeze: 2, heal: 1 }, reward: null, elapsed: 0, freezeTime: 0, kills: 0,
   };
@@ -102,14 +90,14 @@ export function startWave(state: GameState): GameState {
       speed: speed * (isChieftain ? .75 : isAxeman ? 1.04 : 1),
       kind, slow: 0 };
   });
-  return { ...state, wave, phase: 'wave', enemies, reward: null, shots: [], frostBursts: [] };
+  return { ...state, wave, phase: 'wave', enemies, reward: null, shots: [], frostBursts: [], soldiers: [], deployments: [] };
 }
 function moveEnemies(state: GameState, dt: number): Enemy[] {
   return state.enemies.map(enemy => ({ ...enemy, slow: Math.max(0, enemy.slow - dt),
     frostNovaTime: Math.max(0, (enemy.frostNovaTime ?? 0) - dt),
-    distance: enemy.hp <= 0 ? enemy.distance : enemy.distance + enemy.speed * dt * (state.freezeTime > 0 ? EFFECTS.freezeSpeed : enemy.slow > 0 ? EFFECTS.frostSpeed : 1) }));
+    distance: enemy.hp <= 0 || enemy.engaged ? enemy.distance : enemy.distance + enemy.speed * dt * (state.freezeTime > 0 ? EFFECTS.freezeSpeed : enemy.slow > 0 ? EFFECTS.frostSpeed : 1) }));
 }
-function fireTowers(towers: Tower[], moved: Enemy[], dt: number): { towers: Tower[]; enemies: Enemy[]; shots: Shot[] } {
+function fireTowers(towers: Tower[], moved: Enemy[], dt: number, regionIndex: number): { towers: Tower[]; enemies: Enemy[]; shots: Shot[] } {
   let enemies = moved;
   let shots: Shot[] = [];
   const updated = towers.map(tower => {
@@ -117,10 +105,10 @@ function fireTowers(towers: Tower[], moved: Enemy[], dt: number): { towers: Towe
     if (cooldown > 0) return { ...tower, cooldown };
     const position = SLOTS.find(slot => slot.id === tower.slotId)!;
     const stats = towerStats(tower.type, tower.level);
-    const target = enemies.filter(enemy => enemy.hp > 0 && enemy.distance >= 0 && enemy.distance < PATH_LENGTH)
-      .find(enemy => { const point = pointOnPath(enemy.distance); return Math.hypot(point.x - position.x, point.y - position.y) <= stats.range; });
+    const target = enemies.filter(enemy => enemy.hp > 0 && enemy.distance >= 0 && enemy.distance < pathLengthForRegion(regionIndex))
+      .find(enemy => { const point = pointOnPath(enemy.distance, regionIndex); return Math.hypot(point.x - position.x, point.y - position.y) <= stats.range; });
     if (!target) return { ...tower, cooldown: 0 };
-    const point = pointOnPath(target.distance);
+    const point = pointOnPath(target.distance, regionIndex);
     const damage = stats.damage;
     enemies = enemies.map(enemy => {
       const hit = enemy.id === target.id || (tower.type === 'cannon' && enemy.distance >= 0 && Math.abs(enemy.distance - target.distance) < EFFECTS.splashDistance);
@@ -132,15 +120,15 @@ function fireTowers(towers: Tower[], moved: Enemy[], dt: number): { towers: Towe
   });
   return { towers: updated, enemies, shots };
 }
-function spreadFrostOnDeath(enemies: Enemy[]): { enemies: Enemy[]; bursts: FrostBurst[] } {
-  const bursts = enemies.filter(enemy => enemy.hp <= 0 && (enemy.frostNovaTime ?? 0) > 0 && enemy.distance >= 0 && enemy.distance < PATH_LENGTH)
-    .map(enemy => ({ position: pointOnPath(enemy.distance), life: FROST_NOVA.life }));
+function spreadFrostOnDeath(enemies: Enemy[], regionIndex: number): { enemies: Enemy[]; bursts: FrostBurst[] } {
+  const bursts = enemies.filter(enemy => enemy.hp <= 0 && (enemy.frostNovaTime ?? 0) > 0 && enemy.distance >= 0 && enemy.distance < pathLengthForRegion(regionIndex))
+    .map(enemy => ({ position: pointOnPath(enemy.distance, regionIndex), life: FROST_NOVA.life }));
   if (!bursts.length) return { enemies, bursts };
   const chilled = enemies.map(enemy => {
     // Clear consumed marks so spell victims cannot burst again on the next tick.
     if (enemy.hp <= 0) return { ...enemy, frostNovaTime: 0 };
-    if (enemy.distance < 0 || enemy.distance >= PATH_LENGTH) return enemy;
-    const position = pointOnPath(enemy.distance);
+    if (enemy.distance < 0 || enemy.distance >= pathLengthForRegion(regionIndex)) return enemy;
+    const position = pointOnPath(enemy.distance, regionIndex);
     const inBlast = bursts.some(burst => Math.hypot(position.x - burst.position.x, position.y - burst.position.y) <= FROST_NOVA.radius);
     return inBlast ? { ...enemy, slow: EFFECTS.frostSeconds, frostNovaTime: EFFECTS.frostSeconds } : enemy;
   });
@@ -161,29 +149,31 @@ export function tickGame(state: GameState, deltaSeconds: number): GameState {
   const dt = Math.min(.1, deltaSeconds);
   const frostBursts = state.frostBursts.map(burst => ({ ...burst, life: burst.life - dt })).filter(burst => burst.life > 0);
   if (state.phase !== 'wave') return state.frostBursts.length ? { ...state, frostBursts } : state;
-  const fired = fireTowers(state.towers, moveEnemies(state, dt), dt);
-  const spread = spreadFrostOnDeath(fired.enemies);
+  const melee = tickSoldiers(state, dt);
+  const fired = fireTowers(state.towers, moveEnemies({ ...state, enemies: melee.enemies }, dt), dt, state.regionIndex);
+  const spread = spreadFrostOnDeath(fired.enemies, state.regionIndex);
+  const pathLength = pathLengthForRegion(state.regionIndex);
   const combat = { ...fired, enemies: spread.enemies };
-  const escaped = combat.enemies.filter(enemy => enemy.hp > 0 && enemy.distance >= PATH_LENGTH);
+  const escaped = combat.enemies.filter(enemy => enemy.hp > 0 && enemy.distance >= pathLength);
   const killed = combat.enemies.filter(enemy => enemy.hp <= 0).length;
-  const next: GameState = { ...state, towers: combat.towers,
+  const next: GameState = { ...state, soldiers: melee.soldiers, towers: combat.towers,
     frostBursts: [...frostBursts, ...spread.bursts],
-    enemies: combat.enemies.filter(enemy => enemy.hp > 0 && enemy.distance < PATH_LENGTH),
+    enemies: combat.enemies.filter(enemy => enemy.hp > 0 && enemy.distance < pathLength),
     shots: [...state.shots.map(shot => ({ ...shot, life: shot.life - dt })).filter(shot => shot.life > 0), ...combat.shots],
     lives: Math.max(0, state.lives - escaped.reduce((loss, enemy) => loss + (enemy.kind === 'chieftain' ? 3 : 1), 0)),
     kills: state.kills + killed, elapsed: state.elapsed + dt, freezeTime: Math.max(0, state.freezeTime - dt) };
-  if (next.lives === 0) return { ...next, phase: 'defeat', enemies: [], shots: [], frostBursts: [] };
-  return next.enemies.length === 0 ? completeWave(next) : next;
+  if (next.lives === 0) return { ...next, phase: 'defeat', enemies: [], shots: [], frostBursts: [], soldiers: [], deployments: [] };
+  return next.enemies.length === 0 ? settleSoldiers(completeWave(next)) : next;
 }
 export function useSpell(state: GameState, spell: Spell): GameState {
   if (state.phase !== 'wave' || !Object.prototype.hasOwnProperty.call(state.inventory, spell) || state.inventory[spell] < 1 || (spell === 'heal' && state.lives >= 20)) return state;
   const next = { ...state, inventory: { ...state.inventory, [spell]: state.inventory[spell] - 1 } };
   if (spell === 'heal') return { ...next, lives: Math.min(EFFECTS.maxHealth, state.lives + EFFECTS.healHealth) };
   if (spell === 'freeze') return { ...next, freezeTime: EFFECTS.freezeSeconds };
-  const spread = spreadFrostOnDeath(state.enemies.map(enemy => enemy.distance >= 0 ? { ...enemy, hp: enemy.hp - meteorDamage(state.regionIndex) } : enemy));
+  const spread = spreadFrostOnDeath(state.enemies.map(enemy => enemy.distance >= 0 ? { ...enemy, hp: enemy.hp - meteorDamage(state.regionIndex) } : enemy), state.regionIndex);
   return { ...next, enemies: spread.enemies, frostBursts: [...state.frostBursts, ...spread.bursts] };
 }
 export function advanceRegion(state: GameState): GameState {
   if (state.phase !== 'victory' || state.regionIndex >= REGIONS.length - 1) return state;
-  return { ...createGame(state.regionIndex + 1, state.diamonds), inventory: { ...state.inventory } };
+  return { ...createGame(state.regionIndex + 1, state.diamonds), inventory: { ...state.inventory }, soldierTrainingLevel: state.soldierTrainingLevel };
 }

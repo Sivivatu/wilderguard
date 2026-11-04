@@ -13,8 +13,9 @@ describe('full country campaign with earned resources', () => {
 
     for (const region of REGIONS) {
       for (let wave = 1; wave <= 5; wave += 1) {
-        // Place affordable towers from the early choke point toward the castle.
-        for (const placement of plan) {
+        // In the last region, improve the four-tower choke point before spreading funds thin.
+        const regionalPlan = state.regionIndex === REGIONS.length - 1 ? plan.slice(0, 4) : plan;
+        for (const placement of regionalPlan) {
           const next = buildTower(state, placement.slot, placement.type);
           if (next !== state) state = next;
         }
@@ -34,8 +35,10 @@ describe('full country campaign with earned resources', () => {
           elapsed += .1;
           if (elapsed >= .5) {
             if (state.lives <= 14 && state.inventory.heal > 0) state = useSpell(state, 'heal');
-            if (state.inventory.meteor > 0 && state.enemies.length >= 4) state = useSpell(state, 'meteor');
-            if (state.inventory.freeze > 0 && wave >= 4 && state.enemies.length >= 5) state = useSpell(state, 'freeze');
+            const visibleEnemies = state.enemies.filter(enemy => enemy.distance >= 0).length;
+            // Wait for a visible group so spells do not get wasted on waiting spawns.
+            if (state.inventory.meteor > 0 && visibleEnemies >= 5) state = useSpell(state, 'meteor');
+            if (state.inventory.freeze > 0 && wave >= 4 && visibleEnemies >= 5) state = useSpell(state, 'freeze');
           }
         }
         history.push(`${region.name} wave ${wave}: ${state.phase}, ${state.lives} health, ${state.diamonds} diamonds, ${state.kills} kills (${elapsed.toFixed(1)}s)`);
