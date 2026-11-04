@@ -16,8 +16,16 @@ See [the feature plan](../regions-soldiers-plan.md) for the intended behavior.
 - `npm run test:e2e`: all 20 initial browser tests passed; the added victory-refund journey also passes after the review fix, including each region’s terrain and the terrain-load error state.
 - `npm run test:release`: all 18 publisher-helper tests passed.
 - `npm run build`: TypeScript and offline production build pass.
-- `npm run android:beta`: Android beta build passes with versionCode 5. Approved terrain B is included; signed publication checks are recorded below when complete.
+- `npm run android:beta`: Android beta build passes with versionCode 5. Approved terrain B is included.
 - Phone checks cover 844×390, 740×360 and 667×375. Battlefield height remains at least 58% of the screen; major touch targets remain at least 44px. Status is at least 11px, wave label/count at least 12px.
 - Code and security reviews found no critical/high issues. The medium review finding about a missing final-wave refund receipt was fixed and covered by a browser test that first failed on the missing receipt; the training field rejects null and values outside 1–3. Image-generation credentials stay in memory and out of provenance. Four existing moderate development CLI advisories remain, with no high/critical advisories.
 
 UI and Canvas rendering are exercised through browser journeys and are outside the unit coverage percentage. Physical Android and F-Droid client testing remain unverified. Terrain concepts A/B were generated directly with Sunburst through OpenRouter using the user-authorized existing OpenCode key. The model/settings/prompts are recorded in `output/imagegen/terrain-concept-*-v1.json`; the user accepted style B, and five matching individual backgrounds now replace the procedural scenery. The terrain unit test first failed because its loader was absent; the browser failure test first received ready instead of error when terrain requests were blocked. Both pass after integration.
+
+## Signed release verification
+
+On 4 November 2026, the binary distribution commit `6c784036e7019a429d966ac8be05007ad0d8e5db` and its annotated `v0.1.0-beta.5` tag were verified on GitHub. Independent HTTPS downloads from the tag matched all 22 public files exactly. Both signed F-Droid index formats, permanent certificate pins, all five APK signatures/hashes, recommendation 5 and normal v2 release channels passed. Earlier APKs remain unchanged. The signed beta 5 APK is 5,115,371 bytes, SHA-256 `a3dfab70311d70eb8460ccb568f9c41ad417ea4d05984691ed52a135ffa50fef`.
+
+All 84 build inputs match `artifacts/beta-regions-soldiers-source-manifest.json`, SHA-256 `9622e3936e939cc1271718d3144e43c4f57c9bbc6373a2d412c083b180a47ae8`, and the tracked inputs match local source commit `bcfa0b2` (with the known font-license newline normalization). The generated Android config is recorded in the private manifest. Every bundled web asset in the signed APK matches the final production build.
+
+The Pages deployment failed with HTTP 502; its retry is queued during GitHub's reported service incident. The live Pages verifier correctly failed on the old release manifest, so beta 5 is available from its release tag but not yet verified in the Pages feed. Canonical signing state is preserved at beta 4 until that check passes; the complete beta 5 candidate is retained separately. No build inputs or signed bytes were changed during publication recovery.

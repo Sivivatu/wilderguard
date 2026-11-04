@@ -6,21 +6,21 @@ A pixel-art tower-defense adventure through Elderglen: five places to free, five
 
 ## Unlisted Android beta
 
-Wilderguard Beta (`com.wilderguard.game.beta`, version `0.1.0-beta.4`, versionCode 4) is published in a small, unlisted F-Droid repository. It includes the compact phone interface, tower/spell guide, and contagious level 3 Frost nova. It is separate from the original Android preview and does not import that preview's saved progress. Updates from an earlier beta preserve the beta's checkpoint saves. This is a developer-run repository, **not an app in F-Droid’s official catalog**. Anyone who has the public link can access its downloads; “unlisted” does not provide privacy or access control.
+Wilderguard Beta (`com.wilderguard.game.beta`, version `0.1.0-beta.5`, versionCode 5) adds purchase confirmations, independently trained soldiers, larger wave text, and five distinct roads with approved pixelated photographic terrain. It includes the compact phone interface, tower/spell guide, and contagious level 3 Frost nova. It is separate from the original Android preview and does not import that preview's saved progress. Updates from an earlier beta preserve the beta's checkpoint saves. This is a developer-run repository, **not an app in F-Droid’s official catalog**. Anyone who has the public link can access its downloads; “unlisted” does not provide privacy or access control.
 
-**The public page, signed feed, and APK were verified live on 1 November 2026.** Install it on the tablet as follows:
+**Beta 5's signed files were verified from the public release tag on 4 November 2026. GitHub Pages deployment is delayed by a GitHub service incident; the F-Droid feed still serves beta 4.** Download the [signed beta 5 APK](https://raw.githubusercontent.com/Sivivatu/wilderguard-beta/refs/tags/v0.1.0-beta.5/fdroid/repo/com.wilderguard.game.beta_5.apk) directly to update now. For F-Droid installation:
 
 1. [Install F-Droid](https://f-droid.org/F-Droid.apk) if it isn’t already on the device.
 2. Open the [Wilderguard Beta install page](https://sivivatu.github.io/wilderguard-beta/) on the tablet and tap **Add beta to F-Droid**. Confirm adding the repository in F-Droid.
 3. Find **Wilderguard Beta** in F-Droid and tap **Install**. Allow F-Droid to install apps if Android asks.
 
-Alternatively, download the [signed beta APK](https://sivivatu.github.io/wilderguard-beta/fdroid/repo/com.wilderguard.game.beta_4.apk) directly. The install page includes the signing details. The app targets Android API 34, supports API 22 and newer with a modern WebView, and opens in landscape. Physical Tab S4 testing is pending. See [F-Droid beta notes](fdroid/README.md) for publisher and repository details.
+The install page includes the signing details. The app targets Android API 34, supports API 22 and newer with a modern WebView, and opens in landscape. Physical Tab S4 testing is pending. See [F-Droid beta notes](fdroid/README.md) for publisher and repository details.
 
-The live feed recommends beta `0.1.0-beta.4`. Refresh the repository in F-Droid to update, or use the direct signed APK link above. Betas 1, 2 and 3 remain available unchanged, and all four APKs use the same permanent signing identity.
+After the Pages deployment succeeds, refresh the repository in F-Droid for beta 5. All five signed APKs are retained in the published release tag; betas 1–4 remain unchanged and use the same permanent signing identity.
 
 ## Play
 
-The local beta 5 candidate adds confirmations, soldiers, distinct roads and larger status text. The published beta 4 above remains the working reference while terrain approval and the next release are completed.
+Beta 5 includes the accepted terrain style B. The beta 4 source tag remains available as the previous working reference.
 
 Pick a tower, tap a marked place on the map, confirm its diamond cost, and start the wave when you’re ready. Tower upgrades also ask for confirmation; canceling spends nothing and closing a dialog restores your previous pause state. Archer towers fire quickly for 15 damage every 0.7 seconds at range 185. Cannons deal 35 damage every 1.65 seconds at range 170, and splash nearby enemies. Frost towers deal 8 damage every 0.8 seconds at range 165 and always slow a target by 50% for 2 seconds when they hit. Tap a built tower to see its level-specific damage, firing interval, range and upgrades, or open **Tower & spell guide** for all the details. Upgrades increase damage, range and speed; sell a tower for 60% of what you spent.
 
@@ -89,6 +89,6 @@ See [NOTES.md](NOTES.md) for Eric’s original idea and the work still needed be
 
 ## Local version control
 
-The complete project is tracked in a local Git repository on `main`. The beta 2 source checkpoint is tagged `v0.1.0-beta.2`; the beta 3 and 4 source checkpoints are tagged `v0.1.0-beta.3` and `v0.1.0-beta.4`. The source repository has no remote and has not been pushed. Android install material is published separately through the existing F-Droid distribution repository.
+The complete project is tracked in a local Git repository on `main`, with source checkpoints tagged `v0.1.0-beta.2` through `v0.1.0-beta.5`. The source repository has no remote and has not been pushed. Android install material is published separately through the existing F-Droid distribution repository.
 
 Source code, Android build files, tests, documentation, fonts, and the generated artwork concepts are included. Dependencies, generated builds, APKs, reference archives, local configuration, and signing material are ignored. Existing local artifacts remain in `artifacts/`, including the separate F-Droid distribution checkout. Signing-key custody and recovery are documented in the beta publishing runbook; keys are not part of this repository.
