@@ -51,7 +51,8 @@ describe('full country campaign with earned resources', () => {
             const visibleEnemies = state.enemies.filter(enemy => enemy.distance >= 0).length;
             // Wait for a visible group so spells do not get wasted on waiting spawns.
             if (state.inventory.meteor > 0 && visibleEnemies >= 5) state = useSpell(state, 'meteor');
-            if (state.inventory.freeze > 0 && wave >= 4 && visibleEnemies >= 5) state = useSpell(state, 'freeze');
+            // Spend the two starting Deep Freezes on visible groups before the last regions.
+            if (state.inventory.freeze > 0 && visibleEnemies >= 5) state = useSpell(state, 'freeze');
           }
         }
         history.push(`${region.name} wave ${wave}: ${state.phase}, ${state.lives} health, ${state.diamonds} diamonds, ${state.kills} kills (${elapsed.toFixed(1)}s)`);

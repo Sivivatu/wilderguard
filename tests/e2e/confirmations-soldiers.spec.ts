@@ -61,6 +61,23 @@ test('a purchase dialog pauses a wave and restores its previous running state', 
   await expect(page.locator('#map-status')).toContainText('monsters on the march');
 });
 
+test('Frost tower details show the improved chance after each confirmed upgrade', async ({ page }) => {
+  await page.setViewportSize({ width: 740, height: 360 });
+  await seedCampaign(page, [{ id: 'tower-1', slotId: 1, type: 'frost', level: 1 }], 500);
+  await page.goto('/');
+  await page.evaluate(() => document.documentElement.classList.add('battle-focus'));
+  await tapSlot(page);
+  const popover = page.locator('#tower-popover');
+  for (const [index, chance] of ['35% chill (65% failure)', '50% chill (50% failure)', '85% chill (15% failure)'].entries()) {
+    await expect(popover).toContainText(chance);
+    await expect(popover).toContainText(`LEVEL ${index + 1}`);
+    if (index === 2) break;
+    await popover.getByRole('button', { name: /Upgrade/ }).click();
+    await expect(page.getByRole('heading', { name: 'Upgrade Frost tower?' })).toBeVisible();
+    await page.getByRole('button', { name: 'Confirm purchase' }).click();
+  }
+});
+
 test('soldiers can be trained separately and deployed for diamonds during a wave', async ({ page }) => {
   await seedCampaign(page, [{ id: 'tower-1', slotId: 1, type: 'archer', level: 1 }], 240);
   await page.goto('/');

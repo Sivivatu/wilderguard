@@ -21,7 +21,11 @@ export interface GameState {
 }
 export const WAVES_PER_REGION = 5;
 export const MAX_TOWER_LEVEL = 3;
-export const EFFECTS = { frostSpeed: .5, frostSeconds: 2, frostChance: .85, freezeSpeed: .12, freezeSeconds: 6, healHealth: 6, maxHealth: 20, splashDistance: 65 } as const;
+export const EFFECTS = { frostSpeed: .5, frostSeconds: 2, freezeSpeed: .12, freezeSeconds: 6, healHealth: 6, maxHealth: 20, splashDistance: 65 } as const;
+const FROST_CHANCE_BY_LEVEL = [.35, .5, .85] as const;
+export function frostChanceForLevel(level: number): number {
+  return FROST_CHANCE_BY_LEVEL[level - 1] ?? FROST_CHANCE_BY_LEVEL[0];
+}
 export const FROST_NOVA = { radius: 90, life: .65, level: 3 } as const;
 export const REGIONS = [
   { name: 'The Greenfields', subtitle: 'Where your story begins', biome: 'Meadow', color: '#89ad65', monster: 'Greenfield club orcs', difficulty: 'Gentle beginnings' },
@@ -33,7 +37,7 @@ export const REGIONS = [
 export const TOWER_TYPES: Record<TowerType, { name: string; cost: number; damage: number; range: number; interval: number; description: string; color: string }> = {
   archer: { name: 'Archer tower', cost: 70, damage: 15, range: 185, interval: .7, description: 'Quick shots. Steady aim.', color: '#57875c' },
   cannon: { name: 'Cannon tower', cost: 100, damage: 35, range: 170, interval: 1.65, description: 'A little more firepower.', color: '#a17c50' },
-  frost: { name: 'Frost tower', cost: 85, damage: 8, range: 165, interval: .8, description: `${EFFECTS.frostChance * 100}% chance to chill. Prefers unchilled mobs.`, color: '#6f9fa3' },
+  frost: { name: 'Frost tower', cost: 85, damage: 8, range: 165, interval: .8, description: 'Chill chance improves with upgrades. Prefers unchilled mobs.', color: '#6f9fa3' },
 };
 export function towerStats(type: TowerType, level: number) {
   const base = TOWER_TYPES[type];
@@ -130,7 +134,7 @@ function fireTowers(towers: Tower[], moved: Enemy[], dt: number, regionIndex: nu
     if (!target) return { ...tower, cooldown: 0 };
     const point = pointOnPath(target.distance, regionIndex);
     const damage = stats.damage;
-    const appliesChill = tower.type === 'frost' && Math.random() < EFFECTS.frostChance;
+    const appliesChill = tower.type === 'frost' && Math.random() < frostChanceForLevel(tower.level);
     enemies = enemies.map(enemy => {
       const hit = enemy.id === target.id || (tower.type === 'cannon' && enemy.distance >= 0 && Math.abs(enemy.distance - target.distance) < EFFECTS.splashDistance);
       return hit ? { ...enemy, hp: enemy.hp - damage, slow: appliesChill ? EFFECTS.frostSeconds : enemy.slow,

@@ -1,18 +1,19 @@
-import { EFFECTS, FROST_NOVA, MAX_TOWER_LEVEL, meteorDamage, REGIONS, TOWER_TYPES, towerStats, type TowerType } from './game';
+import { EFFECTS, FROST_NOVA, frostChanceForLevel, MAX_TOWER_LEVEL, meteorDamage, REGIONS, TOWER_TYPES, towerStats, type TowerType } from './game';
 import { SPELL_NAMES } from './save';
 import { AXE_THROWER } from './tower-combat';
 
 const number = (value: number) => String(Number(value.toFixed(2)));
 export function towerSummary(type: TowerType, level: number) {
   const stats = towerStats(type, level);
-  return `${number(stats.damage)} damage · every ${number(stats.interval)} seconds · ${stats.range} range${type === 'frost' ? ` · ${number(EFFECTS.frostChance * 100)}% chill` : ''}${type === 'frost' && level === FROST_NOVA.level ? ' · Frost nova' : ''}`;
+  const chance = frostChanceForLevel(level);
+  return `${number(stats.damage)} damage · every ${number(stats.interval)} seconds · ${stats.range} range${type === 'frost' ? ` · ${number(chance * 100)}% chill (${number((1 - chance) * 100)}% failure)` : ''}${type === 'frost' && level === FROST_NOVA.level ? ' · Frost nova' : ''}`;
 }
 
 export function defenseGuide(regionIndex: number) {
   const roles: Record<TowerType, string> = {
     archer: 'Fast shots, low damage per hit. Longest range; attacks one enemy at a time.',
     cannon: `Slow shots, high damage. Splash hits enemies less than ${EFFECTS.splashDistance} path units from the target. Best against groups.`,
-    frost: `Low damage, crowd control. Each hit has an ${number(EFFECTS.frostChance * 100)}% chance to slow its target by ${(1 - EFFECTS.frostSpeed) * 100}% for ${EFFECTS.frostSeconds} seconds, with a ${number((1 - EFFECTS.frostChance) * 100)}% failure chance. Damage always lands. Prefers enemies not already chilled in range, checking again before every shot; if all are chilled, it keeps attacking. Successful hits refresh the slow; failed hits do not refresh it. Slows do not stack. <strong>Level ${FROST_NOVA.level} unlocks Frost nova:</strong> a successful chill also marks its target. If a mob dies while carrying this tower's chill, it bursts, spreading the same slow to mobs within ${FROST_NOVA.radius} battlefield units. Any tower or Starfall can trigger the kill. The burst always spreads chill to nearby mobs, which can burst again if killed before their chill expires. Bursts add no damage; Deep Freeze alone does not trigger them.`,
+    frost: `Low damage, crowd control. Each hit rolls for chill, with a better chance at each upgrade level (shown below). A successful chill slows its target by ${(1 - EFFECTS.frostSpeed) * 100}% for ${EFFECTS.frostSeconds} seconds. Damage always lands. Prefers enemies not already chilled in range, checking again before every shot; if all are chilled, it keeps attacking. Successful hits refresh the slow; failed hits do not refresh it. Slows do not stack. <strong>Level ${FROST_NOVA.level} unlocks Frost nova:</strong> a successful chill also marks its target. If a mob dies while carrying this tower's chill, it bursts, spreading the same slow to mobs within ${FROST_NOVA.radius} battlefield units. Any tower or Starfall can trigger the kill. The burst always spreads chill to nearby mobs, which can burst again if killed before their chill expires. Bursts add no damage; Deep Freeze alone does not trigger them.`,
   };
   return `<span class="eyebrow">KNOW YOUR DEFENSES</span><h2>Towers &amp; abilities</h2>
     <p>Choose a tower, then tap a + pad to build. Tap a built tower for its current stats, upgrades or a 60% sale refund. Range uses battlefield units.</p>
