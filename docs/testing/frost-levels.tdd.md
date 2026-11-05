@@ -36,4 +36,26 @@ actual F-Droid client update testing remain unverified.
 All 31 browser cases pass, including the short-phone guide and actual Frost
 popover after each confirmed upgrade from level 1 through level 3. Code and
 security reviews approved with no critical/high findings. Signed release
-verification will be recorded below after completion. Sentry evaluation is in the separate user-requested thread.
+verification is recorded below. Sentry evaluation is in the separate user-requested thread.
+
+## Signed release verification
+
+GREEN checkpoint `b842860ed66d8565329e31036d0ef589a27be9d5` contains the verified
+engine and beta 8 build inputs. The private manifest
+`artifacts/beta-frost-levels-source-manifest.json` records 88 inputs, SHA-256
+`c92cc760caa955598dd367cfa00b737c2c7e7d153edb64a1dc5b53471b232c49`.
+All inputs remained unchanged through publication. Every web asset embedded in
+the signed APK matches the final offline production build.
+
+On 5 November 2026, distribution commit `1dab5c1ec80e2ad339e3330b485c3e431a829d69`
+and tag `v0.1.0-beta.8` were published. Pages deployment `42067570304` succeeded.
+Independent tag and Pages downloads matched all 25 public files and verified
+both signed indexes, permanent pins and all eight APK signatures/hashes.
+The live feed recommends version 8 normally. The APK is 5,172,806 bytes, SHA-256
+`1d6dbe788758dce5190b557c3eb1e665a565d89993d90c1c320f699d6d11d03a`;
+all seven earlier APKs remain unchanged.
+
+Canonical signing state was promoted only after live verification, preserving
+the seven-release state in `artifacts/fdroid-state-before-beta8`. Source stays
+local and unpushed, with the final source/docs checkpoint tagged `v0.1.0-beta.8`.
+Beta 7's tag remains unchanged. Private receipts and the verifier stay in artifacts.
