@@ -1,0 +1,18 @@
+{
+  "source": "output/imagegen/orc-thrower-concept-v1.png",
+  "sourceSha256": "085d2a39601b122812365cb2dfc90f5f3e3303b2ff24dae3b378352a26319b4e",
+  "approved": true,
+  "transformation": "Remove border-connected neutral gray pixels (RGB channel spread <=10); crop transparent margins; nearest-neighbor height176. No generation credentials retained.",
+  "crop": [
+    88,
+    57,
+    958,
+    964
+  ],
+  "output": "src/assets/orc-thrower.png",
+  "size": [
+    169,
+    176
+  ],
+  "sha256": "539f02229767126881e5f050dfd1e0f3b2023fc2f2e901da1dea548a318b3557"
+}

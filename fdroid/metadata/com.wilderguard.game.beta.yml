@@ -12,10 +12,12 @@ Description: |
   Send soldiers from towers, train them separately and recover diamonds for
   each survivor. Defend five distinct pixel-photo environments and roads.
   Confirm purchases and play offline with compact landscape touch controls.
+  Watch castle and tower health, repair damaged towers and counter ranged
+  axe-throwing orcs with soldiers. Fullscreen controls adapt to your device.
 
   This is an early beta in a developer-operated custom F-Droid repository.
   There are no accounts, advertising, tracking, or in-app purchases.
   Saved progress stays on the device. The beta installs separately from the
   original debug preview and does not import that preview's saved progress.
-CurrentVersion: 0.1.0-beta.5
-CurrentVersionCode: 5
+CurrentVersion: 0.1.0-beta.6
+CurrentVersionCode: 6

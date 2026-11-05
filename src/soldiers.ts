@@ -29,7 +29,7 @@ const TRAINING_COSTS = [35, 70, 0] as const;
 const ENEMY_ATTACK_INTERVAL = 1;
 const ENEMY_BASE_DAMAGE = 8;
 const ENEMY_REGION_DAMAGE = 3;
-const ENEMY_DAMAGE_MULTIPLIER = { clubber: 1, axeman: 1.3, chieftain: 2 } as const;
+const ENEMY_DAMAGE_MULTIPLIER = { clubber: 1, axeman: 1.3, chieftain: 2, thrower: .8 } as const;
 
 function isTrainingLevel(level: number): boolean {
   return Number.isInteger(level) && level >= 1 && level <= SOLDIERS.maxLevel;

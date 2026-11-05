@@ -1,5 +1,5 @@
 import { SOLDIERS } from './soldiers';
-import { createGame, getWaveReward, MAX_TOWER_LEVEL, REGIONS, SLOTS, type GameState, type Spell, type TowerType } from './game';
+import { createGame, getWaveReward, MAX_TOWER_LEVEL, REGIONS, SLOTS, towerMaxHealth, type GameState, type Spell, type TowerType } from './game';
 const SAVE_KEY = 'wilderguard-campaign-v1';
 const isInteger = (value: unknown, max: number): value is number => Number.isInteger(value) && Number(value) >= 0 && Number(value) <= max;
 const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -23,6 +23,9 @@ export function decodeSave(raw: string | null): GameState | null {
       if (!isRecord(tower) || !isInteger(tower.slotId, SLOTS.length) || tower.slotId === 0 || seen.has(tower.slotId)
         || tower.id !== `tower-${tower.slotId}` || !['archer', 'cannon', 'frost'].includes(String(tower.type))
         || !isInteger(tower.level, MAX_TOWER_LEVEL) || tower.level === 0) return false;
+      const maxHp = towerMaxHealth(tower.type as TowerType, tower.level);
+      const legacy = tower.hp === undefined && tower.maxHp === undefined;
+      if (!legacy && (!isInteger(tower.hp, maxHp) || tower.hp === 0 || tower.maxHp !== maxHp)) return false;
       seen.add(tower.slotId); return true;
     });
     if (!valid) return null;
@@ -30,7 +33,11 @@ export function decodeSave(raw: string | null): GameState | null {
       phase: data.wave === 5 ? 'victory' : data.wave === 0 ? 'preparing' : 'reward', kills: data.kills,
       reward: data.wave > 0 ? getWaveReward(data.regionIndex, data.wave) : null,
       inventory: { meteor: data.inventory.meteor as number, freeze: data.inventory.freeze as number, heal: data.inventory.heal as number },
-      towers: data.towers.map(tower => ({ id: tower.id as string, slotId: tower.slotId as number, type: tower.type as TowerType, level: tower.level as number, cooldown: 0 })) };
+      towers: data.towers.map(tower => {
+        const maxHp = towerMaxHealth(tower.type as TowerType, tower.level as number);
+        return { id: tower.id as string, slotId: tower.slotId as number, type: tower.type as TowerType,
+          level: tower.level as number, cooldown: 0, hp: (tower.hp ?? maxHp) as number, maxHp };
+      }) };
   } catch { return null; }
 }
 export function loadGame(): GameState | null {

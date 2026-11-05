@@ -1,6 +1,7 @@
 import { Capacitor } from '@capacitor/core';
 import { createIcons, Shield, Gem, Heart, ChevronRight, ChevronDown, ArrowRight, Map, Swords, BookOpen, Settings, Volume2, VolumeX, Play, Pause, FastForward, Flag, LockKeyhole, Check, Sparkles, Snowflake, Flame, Plus, X, Leaf, Target, Crosshair, RotateCcw, CircleHelp, Maximize, Trophy, ArrowUp, Trash2, Mountain, TreePine, Castle, Sun, Crown } from 'lucide';
-import { advanceRegion, buildTower, createGame, MAX_TOWER_LEVEL, REGIONS, sellTower, SLOTS, startWave, tickGame, TOWER_TYPES, upgradeCost, upgradeTower, useSpell, type GameState, type Spell, type TowerType } from './game';
+import { advanceRegion, buildTower, createGame, MAX_TOWER_LEVEL, REGIONS, repairCost, repairTower, sellTower, SLOTS, startWave, tickGame, TOWER_TYPES, upgradeCost, upgradeTower, useSpell, type GameState, type Spell, type TowerType } from './game';
+import { setupFullscreen } from './fullscreen';
 import { GameRenderer, drawTower } from './render';
 import { loadGame, saveGame, SPELL_NAMES } from './save';
 import { defenseGuide, towerSummary } from './defense-guide';
@@ -10,7 +11,6 @@ import './style.css';
 
 const isInstalled = () => Capacitor.isNativePlatform() || window.matchMedia('(display-mode: standalone)').matches;
 if (isInstalled()) document.documentElement.classList.add('battle-focus');
-document.addEventListener('fullscreenchange', () => document.documentElement.classList.toggle('battle-focus', isInstalled() || !!document.fullscreenElement));
 
 const icons = { Shield, Gem, Heart, ChevronRight, ChevronDown, ArrowRight, Map, Swords, BookOpen, Settings, Volume2, VolumeX, Play, Pause, FastForward, Flag, LockKeyhole, Check, Sparkles, Snowflake, Flame, Plus, X, Leaf, Target, Crosshair, RotateCcw, CircleHelp, Maximize, Trophy, ArrowUp, Trash2, Mountain, TreePine, Castle, Sun, Crown };
 const icon = (name: string, cls = '') => `<i data-lucide="${name}" class="${cls}" aria-hidden="true"></i>`;
@@ -25,6 +25,7 @@ let audio: AudioContext | null = null;
 let toastTimer: ReturnType<typeof setTimeout>;
 let storageWarningShown = false;
 let checkpoint = state;
+const lastTowerNames = new globalThis.Map(state.towers.map(tower => [tower.id, TOWER_TYPES[tower.type].name]));
 const app = document.querySelector<HTMLDivElement>('#app')!;
 const regionIcons = ['sun', 'tree-pine', 'mountain', 'snowflake', 'castle'];
 app.innerHTML = `
@@ -49,9 +50,10 @@ app.innerHTML = `
     <section class="battle-section" aria-label="Tower defense game">
       <div class="section-heading"><div><div class="eyebrow"><span class="small-leaf">${icon('leaf')}</span> THE ELDERGLEN CAMPAIGN</div><h1>Stand your ground<span>.</span></h1><p>Build your defenses. Brave the waves. Bring the wild back home.</p></div><button class="how-to" data-dialog="guide">${icon('circle-help')} How to play</button></div>
       <div class="battle-board">
-        <div class="board-top"><div class="location-label"><span class="location-icon">${icon('flag')}</span><div><h2 id="location-name">The Greenfields</h2><span id="location-subtitle">Where your story begins</span></div></div><div class="board-hud"><span class="focus-wallet" title="Available diamonds">${icon('gem')}<strong id="battle-diamond-count">120</strong></span><span class="lives" title="Kingdom health">${icon('heart')}<strong id="lives-count">20</strong></span><span class="hud-divider"></span><span class="wave-label">WAVE <strong id="wave-count">01 <span>/ 05</span></strong></span><button class="icon-button pause-button" id="pause" aria-label="Pause game">${icon('pause')}</button><button class="speed-button" id="speed" aria-label="Set game speed to 2x">1×</button><button class="icon-button focus-menu" id="battle-menu" aria-label="Open game menu">${icon('settings')}</button></div></div>
+        <div class="board-top"><div class="location-label"><span class="location-icon">${icon('flag')}</span><div><h2 id="location-name">The Greenfields</h2><span id="location-subtitle">Where your story begins</span></div></div><div class="board-hud"><span class="focus-wallet" title="Available diamonds">${icon('gem')}<strong id="battle-diamond-count">120</strong></span><span class="lives castle-health" id="castle-health" role="meter" aria-label="Castle health" aria-valuemin="0" aria-valuemax="20" aria-valuenow="20">${icon('heart')}<span class="castle-health-text"><span class="castle-label">Castle</span> <strong id="lives-count">20</strong><span class="health-max">/20</span></span><span class="castle-health-track" aria-hidden="true"><span id="castle-health-fill"></span></span></span><span class="hud-divider"></span><span class="wave-label">WAVE <strong id="wave-count">01 <span>/ 05</span></strong></span><button class="icon-button pause-button" id="pause" aria-label="Pause game">${icon('pause')}</button><button class="speed-button" id="speed" aria-label="Set game speed to 2x">1×</button><button class="icon-button focus-menu" id="battle-menu" aria-label="Open game menu">${icon('settings')}</button></div></div>
         <div class="map-container"><canvas id="game-canvas" aria-label="Battlefield. Choose a defense below and tap an empty circular pad to build." tabindex="0"></canvas>
           <div class="map-caption"><span class="live-dot"></span><span id="map-status">A quiet meadow. For now.</span></div>
+          <div class="damage-status" id="damage-status" role="status" aria-live="polite" hidden></div>
           <button class="fullscreen-button" id="fullscreen" aria-label="Toggle full screen">${icon('maximize')}</button>
           <div class="map-hint" id="map-hint">${icon('crosshair')}<span>Choose a tower, then tap a <strong>+ build spot</strong></span></div>
           <div class="tower-popover" id="tower-popover" hidden></div>
@@ -100,6 +102,10 @@ function updateUI() {
   get('diamond-count').textContent = state.diamonds.toLocaleString();
   get('battle-diamond-count').textContent = state.diamonds.toLocaleString();
   get('lives-count').textContent = String(state.lives);
+  get('castle-health').setAttribute('aria-valuenow', String(state.lives));
+  get('castle-health').classList.toggle('damaged', state.lives < 20);
+  get('castle-health-fill').style.width = `${state.lives / 20 * 100}%`;
+  updateDamageStatus();
   get('wave-count').innerHTML = `${String(Math.max(1, state.wave)).padStart(2, '0')} <span>/ 05</span>`;
   get('location-name').textContent = REGIONS[state.regionIndex].name;
   get('location-subtitle').textContent = REGIONS[state.regionIndex].subtitle;
@@ -131,6 +137,23 @@ function updateUI() {
   }
   updatePopover(); updateResult(); refreshIcons();
 }
+function updateDamageStatus() {
+  const notice = get('damage-status');
+  const event = state.damageEvents[state.damageEvents.length - 1];
+  const damaged = state.towers.filter(tower => tower.hp < tower.maxHp);
+  let message = damaged.length ? `${damaged.length} damaged tower${damaged.length === 1 ? '' : 's'} · tap to repair` : '';
+  if (event) {
+    const name = event.target === 'castle' ? 'Castle' : `${TOWER_TYPES[state.towers.find(tower => tower.id === event.targetId)?.type ?? selectedType].name}`;
+    // A removed tower's original type is retained in the last battlefield snapshot.
+    const removedName = lastTowerNames.get(event.targetId) ?? name;
+    message = event.target === 'castle' ? `Castle hit! −${event.amount} health · ${state.lives}/20 remaining`
+      : event.destroyed ? `${removedName} destroyed · build spot available`
+      : `${name} hit! −${event.amount} HP · tap to repair`;
+  }
+  notice.hidden = !message;
+  if (notice.textContent !== message) notice.textContent = message;
+  for (const tower of state.towers) lastTowerNames.set(tower.id, TOWER_TYPES[tower.type].name);
+}
 function updatePopover() {
   const popover = get('tower-popover'); const tower = state.towers.find(candidate => candidate.slotId === selectedSlot);
   if (!tower || ['defeat', 'victory'].includes(state.phase)) { popover.hidden = true; return; }
@@ -138,7 +161,7 @@ function updatePopover() {
   const slot = SLOTS.find(candidate => candidate.id === selectedSlot)!;
   popover.style.left = `${Math.min(79, Math.max(15, slot.x / 1100 * 100))}%`;
   popover.style.top = `${Math.min(71, Math.max(18, slot.y / 600 * 100 - 19))}%`;
-  popover.innerHTML = `<div><strong>${TOWER_TYPES[tower.type].name}</strong><button class="tiny-close" data-action="deselect" aria-label="Close tower details">${icon('x')}</button></div><small>LEVEL ${tower.level} / ${MAX_TOWER_LEVEL}</small><p class="popover-stats">${towerSummary(tower.type, tower.level)}</p><button class="popover-guide" data-dialog="defenses">Strengths &amp; abilities ${icon('circle-help')}</button><button class="popover-soldiers" data-action="soldiers">${icon('swords')} Soldiers</button><div><button data-action="upgrade" ${tower.level === MAX_TOWER_LEVEL || state.diamonds < upgradeCost(tower) ? 'disabled' : ''}>${icon('arrow-up')} ${tower.level === MAX_TOWER_LEVEL ? 'Max level' : `Upgrade · ${upgradeCost(tower)} ${icon('gem')}`}</button><button class="sell-button" data-action="sell" aria-label="Sell tower for 60 percent refund">${icon('trash-2')}</button></div>`;
+  popover.innerHTML = `<div><strong>${TOWER_TYPES[tower.type].name}</strong><button class="tiny-close" data-action="deselect" aria-label="Close tower details">${icon('x')}</button></div><small>LEVEL ${tower.level} / ${MAX_TOWER_LEVEL}</small><p class="tower-health" role="meter" aria-label="Tower health" aria-valuemin="0" aria-valuemax="${tower.maxHp}" aria-valuenow="${tower.hp}">${tower.hp} / ${tower.maxHp} HP<span><span style="width:${tower.hp / tower.maxHp * 100}%"></span></span></p><p class="popover-stats">${towerSummary(tower.type, tower.level)}</p><button class="popover-guide" data-dialog="defenses">Strengths &amp; abilities ${icon('circle-help')}</button><button class="popover-repair" data-action="repair" ${tower.hp >= tower.maxHp || state.diamonds < repairCost(tower) ? 'disabled' : ''}>Repair · ${repairCost(tower)} ${icon('gem')}</button><button class="popover-soldiers" data-action="soldiers">${icon('swords')} Soldiers</button><div><button data-action="upgrade" ${tower.level === MAX_TOWER_LEVEL || state.diamonds < upgradeCost(tower) ? 'disabled' : ''}>${icon('arrow-up')} ${tower.level === MAX_TOWER_LEVEL ? 'Max level' : `Upgrade · ${upgradeCost(tower)} ${icon('gem')}`}</button><button class="sell-button" data-action="sell" aria-label="Sell tower for 60 percent refund">${icon('trash-2')}</button></div>`;
 }
 function updateResult() {
   const overlay = get('result-overlay');
@@ -174,14 +197,11 @@ get('start-wave').addEventListener('click', launchWave);
 get('pause').addEventListener('click', () => setPaused(!paused));
 get('resume').addEventListener('click', () => setPaused(false));
 get('speed').addEventListener('click', () => { speed = speed === 1 ? 2 : 1; updateUI(); });
-get('fullscreen').addEventListener('click', async () => {
-  try { if (document.fullscreenElement) await document.exitFullscreen(); else await document.documentElement.requestFullscreen(); }
-  catch { toast('Full screen is unavailable here. Landscape mode gives the best view.'); }
-});
+setupFullscreen(get<HTMLButtonElement>('fullscreen'), { native: Capacitor.isNativePlatform(), installed: isInstalled(), onError: toast });
 app.addEventListener('click', event => {
   const button = (event.target as HTMLElement).closest<HTMLButtonElement>('button'); if (!button) return;
   if (button.dataset.tower) { selectedType = button.dataset.tower as TowerType; selectedSlot = null; updateUI(); }
-  if (button.dataset.spell) { const spell = button.dataset.spell as Spell; const next = useSpell(state, spell); if (next !== state) { state = next; playSound('spell'); toast(`${SPELL_NAMES[spell]} cast!`); updateUI(); } }
+  if (button.dataset.spell) { const spell = button.dataset.spell as Spell; const next = useSpell(state, spell); if (next !== state) { state = next; playSound('spell'); toast(spell === 'heal' ? `Castle restored to ${state.lives}/20 health. Towers need their own repairs.` : `${SPELL_NAMES[spell]} cast!`); updateUI(); } }
   if (button.dataset.region) { const index = Number(button.dataset.region); toast(index === state.regionIndex ? `You’re defending ${REGIONS[index].name}.` : index < state.regionIndex ? 'This region is safe. Keep going — the kingdom needs you!' : `Free ${REGIONS[index - 1].name} to unlock this region.`); }
   if (button.dataset.dialog) showDialog(button.dataset.dialog);
   const action = button.dataset.action;
@@ -197,13 +217,17 @@ app.addEventListener('click', event => {
   }
   if (action === 'soldiers') showDialog('soldiers');
   if (action === 'train-soldiers' || action === 'deploy-soldiers') requestSoldierPurchase(action);
-  if (action === 'upgrade' || action === 'sell') {
+  if (action === 'upgrade' || action === 'sell' || action === 'repair') {
     const tower = state.towers.find(t => t.slotId === selectedSlot); if (!tower || paused) return;
     if (action === 'upgrade') {
       const level = tower.level; const cost = upgradeCost(tower);
       requestPurchase({ heading: `Upgrade ${TOWER_TYPES[tower.type].name}?`, cost,
         detail: `Level ${level} → ${level + 1}. ${towerSummary(tower.type, level + 1)}`,
         apply: current => current.towers.find(t => t.id === tower.id)?.level === level ? upgradeTower(current, tower.id) : current });
+    } else if (action === 'repair') {
+      requestPurchase({ heading: `Repair ${TOWER_TYPES[tower.type].name}?`, cost: repairCost(tower),
+        detail: `Restore ${tower.maxHp - tower.hp} health to ${tower.maxHp} HP. Repairs affect this tower only.`,
+        apply: current => repairTower(current, tower.id) });
     } else {
       const next = sellTower(state, tower.id);
       if (next !== state) { state = next; selectedSlot = null; playSound('build'); persist(); updateUI(); }
@@ -256,7 +280,7 @@ function showDialog(type: string) {
   else if (type === 'restart') content.innerHTML = `<span class="dialog-badge">${icon('rotate-ccw')}</span><h2>A fresh adventure?</h2><p>This replaces the campaign saved on this device and returns you to the Greenfields with 120 diamonds.</p><button class="primary-button" data-action="restart-confirm">Start from the beginning ${icon('arrow-right')}</button>`;
   else if (type === 'defenses') content.innerHTML = defenseGuide(state.regionIndex);
   else if (type === 'campaign' || type === 'completed') content.innerHTML = `<span class="dialog-badge">${icon('map')}</span><span class="eyebrow">EVERY PLACE IS WORTH PROTECTING</span><h2>The road through Elderglen</h2><p>Five regions. Five waves each. Clear a region to journey onward with your diamonds and spells. Each new place needs a fresh set of towers.</p>${REGIONS.map((region, index) => `<div class="guide-row"><span class="guide-symbol">${icon(regionIcons[index])}</span><div><strong>${index + 1}. ${region.name}</strong><p>${region.difficulty} · ${index < state.regionIndex || index === state.regionIndex && state.phase === 'victory' ? 'Liberated' : index === state.regionIndex ? 'Your current stand' : 'Waiting to be freed'}</p></div></div>`).join('')}`;
-  else content.innerHTML = `<span class="dialog-badge">${icon('book-open')}</span><span class="eyebrow">A SMALL GUIDE TO A BIG ADVENTURE</span><h2>Welcome, Wilderguard.</h2><p>The kingdom of Elderglen needs a little courage. Yours will do nicely.</p><div class="guide-row"><span class="guide-step">1</span><div><strong>Build your line of defense</strong><p>Select a tower, then tap a + spot on the meadow. Towers attack automatically. Tap them to upgrade.</p></div></div><div class="guide-row"><span class="guide-step">2</span><div><strong>Hold back the horde</strong><p>Start a wave when you’re ready. Orcs grow stronger each wave. Upgrade your towers and mix their strengths. Each escaped orc costs health; an armored chieftain costs three. Lose all 20 and you’ll retry from before that wave.</p></div></div><div class="guide-row"><span class="guide-step">3</span><div><strong>Bring the wild back home</strong><p>Earn diamonds after every wave. Wave 3 gives a freeze spell; wave 5 gives Starfall. Clear 5 waves to free a region and move on.</p></div></div><div class="guide-row"><span class="guide-step">✦</span><div><strong>Save a little magic for a hard moment</strong><p>Starfall hits all visible monsters. Deep freeze slows the horde for 6 seconds. Mending light restores 6 health.</p></div></div><div class="creator-note">Made by <strong>Eric, a 7-year-old boy.</strong><br>Best played in landscape, with a brave heart.</div>`;
+  else content.innerHTML = `<span class="dialog-badge">${icon('book-open')}</span><span class="eyebrow">A SMALL GUIDE TO A BIG ADVENTURE</span><h2>Welcome, Wilderguard.</h2><p>The kingdom of Elderglen needs a little courage. Yours will do nicely.</p><div class="guide-row"><span class="guide-step">1</span><div><strong>Build your line of defense</strong><p>Select a tower, then tap a + spot on the meadow. Towers attack automatically. Tap them to upgrade.</p></div></div><div class="guide-row"><span class="guide-step">2</span><div><strong>Hold back the horde</strong><p>Start a wave when you’re ready. Orcs grow stronger each wave. Upgrade your towers and mix their strengths. The castle health meter and the bar above its roof show your remaining health. Each escaped orc costs health; an armored chieftain costs three. Lose all 20 and you’ll retry from before that wave.</p></div></div><div class="guide-row"><span class="guide-step">3</span><div><strong>Bring the wild back home</strong><p>Earn diamonds after every wave. Wave 3 gives a freeze spell; wave 5 gives Starfall. Clear 5 waves to free a region and move on.</p></div></div><div class="guide-row"><span class="guide-step">✦</span><div><strong>Save a little magic for a hard moment</strong><p>Starfall hits all visible monsters. Deep freeze slows the horde for 6 seconds. Mending light restores 6 castle health. Tower repairs cost diamonds and require confirmation.</p></div></div><div class="creator-note">Made by <strong>Eric, a 7-year-old boy.</strong><br>Best played in landscape, with a brave heart.</div>`;
   if (!dialog.open) dialog.showModal(); updateUI(); refreshIcons();
   get('toggle-sound')?.addEventListener('click', () => { soundEnabled = !soundEnabled; if (soundEnabled) playSound('build'); showDialog('settings'); });
 }
@@ -281,7 +305,10 @@ function frame(timestamp: number) {
     if (state.phase !== previousPhase) { persist(); playSound(state.phase === 'defeat' ? 'build' : 'win'); updateUI(); }
     else if (timestamp - lastUiUpdate > 500) { updateUI(); lastUiUpdate = timestamp; }
   }
-  else if (!paused && state.frostBursts.length) state = tickGame(state, dt);
+  else if (!paused && (state.frostBursts.length || state.damageEvents.length)) {
+    state = tickGame(state, dt);
+    if (timestamp - lastUiUpdate > 500) { updateUI(); lastUiUpdate = timestamp; }
+  }
   renderer.draw(state, selectedSlot, selectedType, timestamp / 1000);
   requestAnimationFrame(frame);
 }

@@ -3,6 +3,7 @@ import { pathForRegion, pathLengthForRegion } from './region-geometry';
 import { drawSoldier } from './soldier-art';
 import { loadOrcArt, type OrcArt } from './orc-art';
 import { drawFrostBurst } from './frost-nova-art';
+import { drawCastleHealth, drawDamageEffects, drawHealthBar, drawThrownAxe } from './structure-art';
 import { SLOTS, TOWER_TYPES, pointOnPath, type GameState, type TowerType } from './game';
 
 export const MAP_WIDTH = 1100;
@@ -96,7 +97,7 @@ export function drawTower(ctx: Context, x: number, y: number, type: TowerType, l
 }
 function monster(ctx: Context, enemy: GameState['enemies'][number], art: OrcArt, regionIndex: number) {
   const pos = pointOnPath(enemy.distance, regionIndex);
-  const height = enemy.kind === 'chieftain' ? 82 : enemy.kind === 'axeman' ? 66 : 60;
+  const height = enemy.kind === 'chieftain' ? 82 : enemy.kind === 'axeman' || enemy.kind === 'thrower' ? 66 : 60;
   const image = art[enemy.kind];
   const width = Math.round(height * image.naturalWidth / image.naturalHeight);
   const bob = Math.sin(enemy.distance * .12 + enemy.id) * 1.2;
@@ -159,7 +160,10 @@ export class GameRenderer {
         const range = TOWER_TYPES[tower?.type || selectedType].range + ((tower?.level || 1) - 1) * 15;
         ellipse(ctx, slot.x, slot.y, range, range, '#f8f4ca20'); ctx.strokeStyle = '#fff8d177'; ctx.lineWidth = 1.5; ctx.setLineDash([5, 6]); ctx.stroke(); ctx.setLineDash([]);
       }
-      if (tower) drawTower(ctx, slot.x, slot.y, tower.type, tower.level);
+      if (tower) {
+        drawTower(ctx, slot.x, slot.y, tower.type, tower.level);
+        drawHealthBar(ctx, slot.x - 23, slot.y - 92, 46, tower.hp, tower.maxHp);
+      }
       else {
         ellipse(ctx, slot.x, slot.y + 3, 25, 15, '#42614326'); ellipse(ctx, slot.x, slot.y, 24, 14, '#f1edce9c');
         ctx.strokeStyle = '#fff9dcab'; ctx.lineWidth = 1.7; ctx.setLineDash([3, 4]); ctx.beginPath(); ctx.ellipse(slot.x, slot.y, 25, 15, 0, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]);
@@ -172,10 +176,13 @@ export class GameRenderer {
     }
     for (const soldier of state.soldiers) drawSoldier(ctx, soldier, state.regionIndex);
     for (const shot of state.shots) {
+      if (shot.type === 'axe') { drawThrownAxe(ctx, shot); continue; }
       ctx.globalAlpha = Math.max(0, shot.life / .2); ctx.strokeStyle = shot.type === 'frost' ? '#d4f9f4' : shot.type === 'cannon' ? '#ffe0a2' : '#faf0b9'; ctx.lineWidth = shot.type === 'cannon' ? 4 : 2;
       ctx.beginPath(); ctx.moveTo(shot.from.x, shot.from.y); ctx.lineTo(shot.to.x, shot.to.y); ctx.stroke(); ellipse(ctx, shot.to.x, shot.to.y, 5, 5, ctx.strokeStyle); ctx.globalAlpha = 1;
     }
     for (const burst of state.frostBursts) drawFrostBurst(ctx, burst);
+    drawCastleHealth(ctx, state);
+    drawDamageEffects(ctx, state.damageEvents);
     if (state.freezeTime > 0) { ctx.fillStyle = '#b8eff222'; ctx.fillRect(0, 0, MAP_WIDTH, MAP_HEIGHT); }
     // Drifting flecks of light, subtle enough to leave the defenses in focus.
     for (let i = 0; i < 8; i += 1) { const x = (random(i + 600) * 1100 + time * 5) % 1100; const y = random(i + 700) * 600 + Math.sin(time * .4 + i) * 12; ellipse(ctx, x, y, 1.5, 1.5, '#fff7d77a'); }

@@ -7,7 +7,7 @@ android {
         applicationId "com.wilderguard.game"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 5
+        versionCode 6
         versionName "0.1.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
@@ -20,7 +20,7 @@ android {
         beta {
             initWith release
             applicationIdSuffix ".beta"
-            versionNameSuffix "-beta.5"
+            versionNameSuffix "-beta.6"
             debuggable false
             matchingFallbacks = ['release']
             resValue "string", "app_name", "Wilderguard Beta"

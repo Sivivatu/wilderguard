@@ -4,6 +4,7 @@ export const ORC_ART_URLS: Record<Enemy['kind'], string> = {
   clubber: new URL('./assets/orc-clubber.png', import.meta.url).href,
   axeman: new URL('./assets/orc-axeman.png', import.meta.url).href,
   chieftain: new URL('./assets/orc-chieftain.png', import.meta.url).href,
+  thrower: new URL('./assets/orc-thrower.png', import.meta.url).href,
 };
 export type OrcArt = Record<Enemy['kind'], HTMLImageElement>;
 

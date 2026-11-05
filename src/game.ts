@@ -1,17 +1,20 @@
 import { BUILD_SLOTS, pathForRegion, pathLengthForRegion, pointOnRegionPath } from './region-geometry';
 import { settleSoldiers, tickSoldiers, type Soldier, type Deployment } from './soldiers';
+import { calculateRepairCost, castleDamageEvents, fireAxeThrowers, normalizeTowerHealth, towerMaxHealth } from './tower-combat';
+export { towerMaxHealth } from './tower-combat';
 
 export type TowerType = 'archer' | 'cannon' | 'frost';
 export type Spell = 'meteor' | 'freeze' | 'heal';
 export type Phase = 'preparing' | 'wave' | 'reward' | 'defeat' | 'victory';
 export interface Point { x: number; y: number }
-export interface Tower { id: string; slotId: number; type: TowerType; level: number; cooldown: number }
-export interface Enemy { id: number; distance: number; hp: number; maxHp: number; speed: number; kind: 'clubber' | 'axeman' | 'chieftain'; slow: number; frostNovaTime?: number; engaged?: boolean; meleeCooldown?: number }
-export interface Shot { from: Point; to: Point; type: TowerType; life: number }
+export interface Tower { id: string; slotId: number; type: TowerType; level: number; cooldown: number; hp: number; maxHp: number }
+export interface Enemy { id: number; distance: number; hp: number; maxHp: number; speed: number; kind: 'clubber' | 'axeman' | 'chieftain' | 'thrower'; slow: number; frostNovaTime?: number; engaged?: boolean; meleeCooldown?: number; rangedCooldown?: number }
+export interface Shot { from: Point; to: Point; type: TowerType | 'axe'; life: number }
 export interface FrostBurst { position: Point; life: number }
+export interface DamageEvent { target: 'castle' | 'tower'; targetId: string; position: Point; amount: number; destroyed: boolean; life: number }
 export interface GameState {
   regionIndex: number; diamonds: number; lives: number; wave: number; phase: Phase;
-  towers: Tower[]; enemies: Enemy[]; shots: Shot[]; frostBursts: FrostBurst[]; inventory: Record<Spell, number>;
+  towers: Tower[]; enemies: Enemy[]; shots: Shot[]; frostBursts: FrostBurst[]; damageEvents: DamageEvent[]; inventory: Record<Spell, number>;
   reward: { diamonds: number; item: Spell | null; soldierRefund?: number } | null;
   soldierTrainingLevel: number; soldiers: Soldier[]; deployments: Deployment[];
   elapsed: number; freezeTime: number; kills: number;
@@ -49,7 +52,7 @@ export function createGame(regionIndex = 0, diamonds = 120): GameState {
     regionIndex: Math.min(REGIONS.length - 1, Math.max(0, Math.floor(regionIndex) || 0)),
     diamonds: Number.isFinite(diamonds) ? Math.max(0, Math.floor(diamonds)) : 120,
     soldierTrainingLevel: 1, soldiers: [], deployments: [],
-    lives: 20, wave: 0, phase: 'preparing', towers: [], enemies: [], shots: [], frostBursts: [],
+    lives: 20, wave: 0, phase: 'preparing', towers: [], enemies: [], shots: [], frostBursts: [], damageEvents: [],
     inventory: { meteor: 1, freeze: 2, heal: 1 }, reward: null, elapsed: 0, freezeTime: 0, kills: 0,
   };
 }
@@ -58,14 +61,28 @@ export function buildTower(state: GameState, slotId: number, type: TowerType): G
   if (!SLOTS.some(slot => slot.id === slotId) || state.towers.some(tower => tower.slotId === slotId)) return state;
   if (state.diamonds < TOWER_TYPES[type].cost) return state;
   return { ...state, diamonds: state.diamonds - TOWER_TYPES[type].cost,
-    towers: [...state.towers, { id: `tower-${slotId}`, slotId, type, level: 1, cooldown: 0 }] };
+    towers: [...state.towers, { id: `tower-${slotId}`, slotId, type, level: 1, cooldown: 0, hp: towerMaxHealth(type, 1), maxHp: towerMaxHealth(type, 1) }] };
 }
 export function upgradeCost(tower: Tower): number { return Math.floor(TOWER_TYPES[tower.type].cost * .7 * tower.level); }
 export function upgradeTower(state: GameState, towerId: string): GameState {
   const tower = state.towers.find(candidate => candidate.id === towerId);
   if (!tower || tower.level >= MAX_TOWER_LEVEL || ['defeat', 'victory'].includes(state.phase) || state.diamonds < upgradeCost(tower)) return state;
   return { ...state, diamonds: state.diamonds - upgradeCost(tower),
-    towers: state.towers.map(candidate => candidate.id === towerId ? { ...candidate, level: candidate.level + 1 } : candidate) };
+    towers: state.towers.map(candidate => {
+      if (candidate.id !== towerId) return candidate;
+      const health = normalizeTowerHealth(candidate);
+      const maxHp = towerMaxHealth(candidate.type, candidate.level + 1);
+      return { ...health, level: candidate.level + 1, maxHp, hp: maxHp - (health.maxHp - health.hp) };
+    }) };
+}
+export function repairCost(tower: Tower): number { return calculateRepairCost(tower, TOWER_TYPES[tower.type].cost); }
+export function repairTower(state: GameState, towerId: string): GameState {
+  const tower = state.towers.find(candidate => candidate.id === towerId);
+  if (!tower || ['defeat', 'victory'].includes(state.phase)) return state;
+  const cost = repairCost(tower);
+  if (cost === 0 || state.diamonds < cost) return state;
+  return { ...state, diamonds: state.diamonds - cost,
+    towers: state.towers.map(candidate => candidate.id === towerId ? { ...normalizeTowerHealth(candidate), hp: towerMaxHealth(candidate.type, candidate.level) } : candidate) };
 }
 export function sellTower(state: GameState, towerId: string): GameState {
   const tower = state.towers.find(candidate => candidate.id === towerId);
@@ -81,16 +98,18 @@ export function startWave(state: GameState): GameState {
   const commonHp = Math.round(48 * 1.1 ** campaignStage);
   const enemies: Enemy[] = Array.from({ length: count }, (_, index) => {
     const isChieftain = wave === WAVES_PER_REGION && index === count - 1;
-    const isAxeman = !isChieftain && wave >= 2 && index % 3 === 1;
-    const kind = isChieftain ? 'chieftain' : isAxeman ? 'axeman' : 'clubber';
-    const strength = isChieftain ? 3 : isAxeman ? 1.5 : 1;
+    const throwersUnlocked = state.regionIndex > 0 || wave >= 3;
+    const isThrower = !isChieftain && throwersUnlocked && (index === Math.floor(count / 2) || state.regionIndex >= 2 && index === count - 2);
+    const isAxeman = !isChieftain && !isThrower && wave >= 2 && index % 3 === 1;
+    const kind = isChieftain ? 'chieftain' : isThrower ? 'thrower' : isAxeman ? 'axeman' : 'clubber';
+    const strength = isChieftain ? 3 : isThrower ? 1.35 : isAxeman ? 1.5 : 1;
     const speed = 37 + wave * 2 + state.regionIndex * 3;
     return { id: wave * 100 + index, distance: -index * 95,
       hp: commonHp * strength, maxHp: commonHp * strength,
       speed: speed * (isChieftain ? .75 : isAxeman ? 1.04 : 1),
       kind, slow: 0 };
   });
-  return { ...state, wave, phase: 'wave', enemies, reward: null, shots: [], frostBursts: [], soldiers: [], deployments: [] };
+  return { ...state, wave, phase: 'wave', enemies, reward: null, shots: [], frostBursts: [], damageEvents: [], soldiers: [], deployments: [] };
 }
 function moveEnemies(state: GameState, dt: number): Enemy[] {
   return state.enemies.map(enemy => ({ ...enemy, slow: Math.max(0, enemy.slow - dt),
@@ -100,7 +119,7 @@ function moveEnemies(state: GameState, dt: number): Enemy[] {
 function fireTowers(towers: Tower[], moved: Enemy[], dt: number, regionIndex: number): { towers: Tower[]; enemies: Enemy[]; shots: Shot[] } {
   let enemies = moved;
   let shots: Shot[] = [];
-  const updated = towers.map(tower => {
+  const updated = towers.map(normalizeTowerHealth).filter(tower => tower.hp > 0).map(tower => {
     const cooldown = Math.max(0, tower.cooldown - dt);
     if (cooldown > 0) return { ...tower, cooldown };
     const position = SLOTS.find(slot => slot.id === tower.slotId)!;
@@ -148,19 +167,23 @@ export function tickGame(state: GameState, deltaSeconds: number): GameState {
   if (!Number.isFinite(deltaSeconds) || deltaSeconds <= 0) return state;
   const dt = Math.min(.1, deltaSeconds);
   const frostBursts = state.frostBursts.map(burst => ({ ...burst, life: burst.life - dt })).filter(burst => burst.life > 0);
-  if (state.phase !== 'wave') return state.frostBursts.length ? { ...state, frostBursts } : state;
+  const damageEvents = (state.damageEvents ?? []).map(event => ({ ...event, life: event.life - dt })).filter(event => event.life > 0);
+  if (state.phase !== 'wave') return state.frostBursts.length || state.damageEvents?.length ? { ...state, frostBursts, damageEvents } : state;
   const melee = tickSoldiers(state, dt);
   const fired = fireTowers(state.towers, moveEnemies({ ...state, enemies: melee.enemies }, dt), dt, state.regionIndex);
   const spread = spreadFrostOnDeath(fired.enemies, state.regionIndex);
   const pathLength = pathLengthForRegion(state.regionIndex);
-  const combat = { ...fired, enemies: spread.enemies };
+  const ranged = fireAxeThrowers(fired.towers, spread.enemies, dt, state.regionIndex);
+  const combat = { ...ranged, shots: [...fired.shots, ...ranged.shots] };
   const escaped = combat.enemies.filter(enemy => enemy.hp > 0 && enemy.distance >= pathLength);
   const killed = combat.enemies.filter(enemy => enemy.hp <= 0).length;
+  const lives = Math.max(0, state.lives - escaped.reduce((loss, enemy) => loss + (enemy.kind === 'chieftain' ? 3 : 1), 0));
   const next: GameState = { ...state, soldiers: melee.soldiers, towers: combat.towers,
     frostBursts: [...frostBursts, ...spread.bursts],
+    damageEvents: [...damageEvents, ...combat.damageEvents, ...castleDamageEvents(state.lives, lives)],
     enemies: combat.enemies.filter(enemy => enemy.hp > 0 && enemy.distance < pathLength),
     shots: [...state.shots.map(shot => ({ ...shot, life: shot.life - dt })).filter(shot => shot.life > 0), ...combat.shots],
-    lives: Math.max(0, state.lives - escaped.reduce((loss, enemy) => loss + (enemy.kind === 'chieftain' ? 3 : 1), 0)),
+    lives,
     kills: state.kills + killed, elapsed: state.elapsed + dt, freezeTime: Math.max(0, state.freezeTime - dt) };
   if (next.lives === 0) return { ...next, phase: 'defeat', enemies: [], shots: [], frostBursts: [], soldiers: [], deployments: [] };
   return next.enemies.length === 0 ? settleSoldiers(completeWave(next)) : next;

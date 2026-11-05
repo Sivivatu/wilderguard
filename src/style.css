@@ -290,6 +290,19 @@ dialog { max-height: 90vh; max-height: 90dvh; overflow-y: auto; overscroll-behav
 .wave-label { font-size: 12px; color: #59654d; }
 .wave-label > strong { font-size: 14px; }
 .popover-soldiers { display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%; min-height: 44px; margin-bottom: 5px; border: 1px solid #b6c8a4; border-radius: 5px; color: #30543d; background: #edf1df; font-size: 12px; }
+.castle-health { position: relative; padding-bottom: 7px; white-space: nowrap; }
+.castle-label { font-size: 11px; font-weight: 600; }
+.health-max { color: #7d8775; font-size: 11px; }
+.castle-health-track { position: absolute; left: 0; right: 0; bottom: 0; height: 4px; border-radius: 3px; background: #e1e5d5; overflow: hidden; }
+.castle-health-track > span { display: block; height: 100%; background: #6d976c; transition: width .2s; }
+.castle-health.damaged .castle-health-track > span { background: #cb815b; }
+.damage-status { position: absolute; bottom: 8px; left: 8px; z-index: 2; max-width: calc(100% - 72px); padding: 7px 10px; border: 1px solid #cfa575; border-radius: 7px; background: #263f31ed; color: #fff0cf; font-size: 12px; pointer-events: none; }
+.tower-health { margin: 5px 0; color: #365a40; font-size: 12px; font-weight: 650; }
+.tower-health > span { display: block; height: 5px; background: #e5dfc9; margin-top: 4px; }
+.tower-health > span > span { display: block; height: 100%; background: #6b946a; }
+.popover-repair { min-height: 44px; width: 100%; display: flex; gap: 5px; align-items: center; justify-content: center; margin: 4px 0; border: 1px solid #c3bd9c; border-radius: 5px; background: #f2ecd9; color: #5b583e; font-size: 12px; }
+.popover-repair svg { width: 13px; height: 13px; }
+@media (max-width: 580px) { .castle-label { display: none; }.castle-health { gap: 3px; }.damage-status { font-size: 11px; } }
 .purchase-actions, .soldier-actions { display: flex; flex-wrap: wrap; gap: 10px; }
 .purchase-actions .primary-button, .soldier-actions .primary-button { margin: 0; }
 .secondary-button { min-height: 44px; padding: 10px 16px; border: 1px solid #bac8a7; border-radius: 6px; color: #30543d; background: #edf1df; font-size: 12px; }

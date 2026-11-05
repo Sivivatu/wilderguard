@@ -25,3 +25,9 @@ The 1536×864 originals were center-fitted with nearest-neighbor scaling to 1100
 | `terrain-sunstone.webp` | 348,746 bytes | `c5743d10a9acd86bdb8c1e369f17bfe50dd04ec4d2e3b4c61b7ac8616154890f` |
 | `terrain-frostfall.webp` | 269,730 bytes | `08d3c7a53197ccc8f26ef10e34f38483eccc424d25f1a2f07b42954ec971dbba` |
 | `terrain-hollow-crown.webp` | 336,136 bytes | `2bccc868c672d312ff1cd0c95216cde50cac970a96b0ea9b1517f07f81f4dcb9` |
+
+## Axe-throwing orc
+
+The user approved `output/imagegen/orc-thrower-concept-v1.png` for the new ranged attacker. It was generated with `openai/gpt-image-2.5-sunburst` through OpenRouter using the existing OpenCode credential in memory. The exact prompt, parameters and sanitized result are recorded in `output/imagegen/orc-thrower-concept-v1.json`. The prompt requests a single child-friendly green orc in a throwing pose, small iron hatchets and a dark teal shoulder wrap, matching the approved pixelated photographic style.
+
+The 1024×1024 concept was cut out by removing border-connected neutral gray pixels, cropped and reduced with nearest-neighbor scaling. The bundled transparent `orc-thrower.png` is 169×176 pixels, SHA-256 `539f02229767126881e5f050dfd1e0f3b2023fc2f2e901da1dea548a318b3557`. Source SHA-256: `085d2a39601b122812365cb2dfc90f5f3e3303b2ff24dae3b378352a26319b4e`. Transformation details are in `output/imagegen/orc-thrower-bundle-v1.json`. Spinning thrown axes and damage effects are drawn in Canvas.

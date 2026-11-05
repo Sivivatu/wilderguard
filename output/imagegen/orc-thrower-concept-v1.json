@@ -1,0 +1,41 @@
+{
+  "generated_at_utc": "2026-11-05T11:21:29.363259+00:00",
+  "endpoint": "https://openrouter.ai/api/v1/images",
+  "prompt": "Use case: stylized-concept. Asset type: a single axe-throwing orc sprite concept for an existing child-friendly tower defense game.\nPrimary request: One stocky muscular green orc with pointed ears and tusks, full body entirely visible, facing right in a slightly elevated three-quarter game camera. He is a ranged axe thrower: one SMALL iron throwing hatchet raised behind his head in a clear throwing pose, second small hatchet at his belt. Distinct worn dark teal leather shoulder wrap, brown leather belt and boots, light rugged armor. Readable athletic throwing silhouette, open throwing hand separate from torso.\nStyle: pixelated photographic miniature like a realistic photographed green orc model reduced to crisp low-resolution pixel art. Visible square pixels, chunky shading clusters and nearest-neighbor edges. Restrained olive green skin, scuffed iron, leather grain. Match existing approved stocky club and axe orcs; no vector or smooth cartoon shapes, no blur or airbrush. Fine realistic material detail translated to clearly square pixels.\nComposition: single figure centered, neutral flat medium gray background, no scenery or ground shadow, generous clear margins around head, axes and boots, body occupies about 75 percent of image height. Axe heads and handles must be clearly visible.\nConstraints: one character only, no blood, gore, injuries, slime, text, labels, UI, watermark, borders or split panels. Child-friendly adventure. No huge two-handed melee axe.",
+  "result": {
+    "model": "openai/gpt-image-2.5-sunburst",
+    "request": {
+      "aspect_ratio": "1:1",
+      "quality": "medium",
+      "n": 1,
+      "output_format": "png"
+    },
+    "http_status": 200,
+    "status": "ok",
+    "output_path": "/home/ubuntu/code/erics-game/output/imagegen/orc-thrower-concept-v1.png",
+    "png_valid": true,
+    "width": 1024,
+    "height": 1024,
+    "size_bytes": 1001300,
+    "usage": {
+      "prompt_tokens": 301,
+      "completion_tokens": 439,
+      "total_tokens": 740,
+      "cost": 0.014675,
+      "is_byok": false,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "cost_details": {
+        "upstream_inference_cost": 0.014675,
+        "upstream_inference_prompt_cost": 0.001505,
+        "upstream_inference_completions_cost": 0.01317
+      },
+      "completion_tokens_details": {
+        "reasoning_tokens": 0,
+        "image_tokens": 439
+      }
+    },
+    "error": null
+  }
+}
