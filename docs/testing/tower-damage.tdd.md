@@ -1,6 +1,6 @@
 # Fullscreen and siege damage: test evidence
 
-The implementation and intended behavior are recorded in [the beta 6 plan](../tower-damage-plan.md). Beta 5 remains the latest signed release; this page records beta 6 work in progress.
+The implementation and intended behavior are recorded in [the beta 6 plan](../tower-damage-plan.md). Beta 6 is published; beta 5's local tag is preserved as the working reference.
 
 ## RED and GREEN
 
@@ -24,4 +24,12 @@ Phone screenshots show the castle-hit status and axe-thrower tower attack: [cast
 
 The thrower artwork is recorded in `output/imagegen/orc-thrower-concept-v1.json`; the approved concept and bundled-sprite transformation are recorded in `output/imagegen/orc-thrower-concept-v1.png` and `output/imagegen/orc-thrower-bundle-v1.json`. The model used was `openai/gpt-image-2.5-sunburst` through the existing OpenCode/OpenRouter credential. No credential is stored in the artwork or provenance files.
 
-Code and security reviews are approved with no critical or high findings. Beta 6 signing and public F-Droid publication are pending. The Samsung Tab S4 and an actual F-Droid client have not been tested.
+Code and security reviews are approved with no critical or high findings. The Samsung Tab S4 and an actual F-Droid client have not been tested.
+
+## Signed release verification
+
+Local RED checkpoint `0ce4ee3` preserves the new test cases; GREEN checkpoint `384012c3eb90370540415e5850fa6953c9f7290c` implements the tested behavior. All 88 build inputs match the private `artifacts/beta-siege-source-manifest.json`, SHA-256 `7b973043c11a83aee70c58dcc95964292e1bc3e118b3eb50cb6c7aa4863cc7fe`. Every web asset embedded in the signed APK matches the production build.
+
+On 5 November 2026, public commit `c33ead776256ed3a3fd2c56639c1bc29b6c3a76f` and annotated tag `v0.1.0-beta.6` were verified on GitHub. Pages deployment `42021571759` succeeded. Independent HTTPS downloads then matched all 23 public files, verified both signed F-Droid indexes, permanent certificate pins and all six APK signatures/hashes, and confirmed version 6 is recommended normally. The APK is 5,172,806 bytes, SHA-256 `774734eec76e23e477a5fe60b883d2744a1726c72f427c010a9ea30dfced21a2`; all five older APKs are unchanged.
+
+After live verification, canonical signing state was promoted to all six releases, preserving the previous state in `artifacts/fdroid-state-before-beta6`. Downloads and private verification receipts remain under `artifacts/`. Source remains local and unpushed; its final release checkpoint is tagged `v0.1.0-beta.6`.

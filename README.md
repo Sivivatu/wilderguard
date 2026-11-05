@@ -6,9 +6,9 @@ A pixel-art tower-defense adventure through Elderglen: five places to free, five
 
 ## Unlisted Android beta
 
-Wilderguard Beta (`com.wilderguard.game.beta`, version `0.1.0-beta.5`, versionCode 5) adds purchase confirmations, independently trained soldiers, larger wave text, and five distinct roads with approved pixelated photographic terrain. It includes the compact phone interface, tower/spell guide, and contagious level 3 Frost nova. It is separate from the original Android preview and does not import that preview's saved progress. Updates from an earlier beta preserve the beta's checkpoint saves. This is a developer-run repository, **not an app in F-Droid’s official catalog**. Anyone who has the public link can access its downloads; “unlisted” does not provide privacy or access control.
+Wilderguard Beta (`com.wilderguard.game.beta`, version `0.1.0-beta.6`, versionCode 6) adds visible castle and tower health, paid tower repairs, ranged axe-throwing orcs and working fullscreen controls where supported. It includes purchase confirmations, independently trained soldiers, five distinct roads with approved pixelated photographic terrain, the compact phone interface, tower/spell guide, and contagious level 3 Frost nova. It is separate from the original Android preview and does not import that preview's saved progress. Updates from an earlier beta preserve the beta's checkpoint saves. This is a developer-run repository, **not an app in F-Droid’s official catalog**. Anyone who has the public link can access its downloads; “unlisted” does not provide privacy or access control.
 
-**Beta 5's public page, signed feed, and APK were verified live on 4 November 2026.** Download the [signed beta 5 APK](https://sivivatu.github.io/wilderguard-beta/fdroid/repo/com.wilderguard.game.beta_5.apk) directly to update now. For F-Droid installation:
+**Beta 6's public page, signed feed, and APK were verified live on 5 November 2026.** Download the [signed beta 6 APK](https://sivivatu.github.io/wilderguard-beta/fdroid/repo/com.wilderguard.game.beta_6.apk) directly to update now. For F-Droid installation:
 
 1. [Install F-Droid](https://f-droid.org/F-Droid.apk) if it isn’t already on the device.
 2. Open the [Wilderguard Beta install page](https://sivivatu.github.io/wilderguard-beta/) on the tablet and tap **Add beta to F-Droid**. Confirm adding the repository in F-Droid.
@@ -16,11 +16,11 @@ Wilderguard Beta (`com.wilderguard.game.beta`, version `0.1.0-beta.5`, versionCo
 
 The install page includes the signing details. The app targets Android API 34, supports API 22 and newer with a modern WebView, and opens in landscape. Physical Tab S4 testing is pending. See [F-Droid beta notes](fdroid/README.md) for publisher and repository details.
 
-The live feed recommends beta 5. Refresh the repository in F-Droid to update. All five signed APKs are retained; betas 1–4 remain unchanged and use the same permanent signing identity.
+The live feed recommends beta 6. Refresh the repository in F-Droid to update. All six signed APKs are retained; betas 1–5 remain unchanged and use the same permanent signing identity.
 
 ## Play
 
-Beta 5 includes the accepted terrain style B. The beta 4 source tag remains available as the previous working reference.
+The accepted terrain style B remains bundled offline. The beta 5 source tag is preserved as the working reference before tower damage and axe throwers.
 
 Pick a tower, tap a marked place on the map, confirm its diamond cost, and start the wave when you’re ready. Tower upgrades also ask for confirmation; canceling spends nothing and closing a dialog restores your previous pause state. Archer towers fire quickly for 15 damage every 0.7 seconds at range 185. Cannons deal 35 damage every 1.65 seconds at range 170, and splash nearby enemies. Frost towers deal 8 damage every 0.8 seconds at range 165 and always slow a target by 50% for 2 seconds when they hit. Tap a built tower to see its level-specific damage, firing interval, range and upgrades, or open **Tower & spell guide** for all the details. Upgrades increase damage, range and speed; sell a tower for 60% of what you spent.
 
@@ -32,11 +32,15 @@ Tap a built tower and choose **Soldiers** to send a two-soldier squad during a w
 
 Each region has a different road, shared by the renderer and combat rules. The battlefield status and wave counter use larger text while keeping the compact phone layout.
 
+The **Castle current/20** meter and bar above the castle show its remaining health. Escaping orcs cause a brief hit outline, floating damage and a message naming the damaged structure. Towers also have health bars and exact HP in their details. Archer towers start at 180 HP, Cannon at 220 and Frost at 170; upgrades add 80 HP to the maximum and remaining health, preserving existing damage. Tap a damaged tower for a confirmed diamond repair. Damage carries between waves, and Mending Light heals the castle rather than towers.
+
+**Axe-throwing orcs** first arrive midway through Greenfields wave 3, after its opening enemies. They attack the nearest tower within 175 battlefield units every 2 seconds for 8 damage in the first region, adding 2 damage per region. Send soldiers to engage them and interrupt their throws. A destroyed tower leaves its pad available to rebuild, with no destruction refund; soldiers already sent from it keep fighting and remain eligible for survivor refunds.
+
 Win diamonds after every wave. On wave 3, earn a Deep Freeze spell; on wave 5, earn Starfall. Mending Light restores kingdom health. After each region, receive an extra supply of **180 diamonds, plus 60 for each region you’ve already freed**, to help build the next defense line. Orcs grow stronger each wave across the campaign. Axe orcs join from wave 2, and an armored chieftain leads each region’s final wave.
 
-Pause, play at 2× speed, or use full screen to adjust how the game feels. In the Android app or when installed to your home screen, the game opens directly into a touch-friendly battle view. Progress saves on this device between waves; if monsters win, you can retry from your last saved setup. Your diamonds and spells carry to the next region, where you choose new towers.
+Pause or play at 2× speed to adjust how the game feels. Supported browsers have a working fullscreen enter/exit control; the control is hidden in the Android app, installed web app and unsupported browsers. In the Android app or when installed to your home screen, the game opens directly into a touch-friendly battle view. Progress saves on this device between waves; existing beta saves give their towers full health. If monsters win, you can retry from your last saved setup, including its tower health. Your diamonds and spells carry to the next region, where you choose new towers.
 
-Each battlefield uses a distinct pixelated photographic background in the approved Sunburst style B, with its own road drawn in Canvas. The campaign map uses SVG. Orcs use pixelated artwork generated from the concept Eric selected. The game bundles all five backgrounds, three sprites and fonts, so battles also work offline. Wilderguard has no accounts, game server, tracking, advertising, or in-app purchases. The Samsung Galaxy Tab S4 in landscape is the target device.
+Each battlefield uses a distinct pixelated photographic background in the approved Sunburst style B, with its own road drawn in Canvas. The campaign map uses SVG. Orcs use pixelated artwork generated from the concepts Eric selected. The game bundles all five backgrounds, four sprites and fonts, so battles also work offline. Wilderguard has no accounts, game server, tracking, advertising, or in-app purchases. The Samsung Galaxy Tab S4 in landscape is the target device.
 
 ## Play in a browser
 
@@ -89,6 +93,6 @@ See [NOTES.md](NOTES.md) for Eric’s original idea and the work still needed be
 
 ## Local version control
 
-The complete project is tracked in a local Git repository on `main`, with source checkpoints tagged `v0.1.0-beta.2` through `v0.1.0-beta.5`. The source repository has no remote and has not been pushed. Android install material is published separately through the existing F-Droid distribution repository.
+The complete project is tracked in a local Git repository on `main`, with source checkpoints tagged `v0.1.0-beta.2` through `v0.1.0-beta.6`. The source repository has no remote and has not been pushed. Android install material is published separately through the existing F-Droid distribution repository.
 
 Source code, Android build files, tests, documentation, fonts, and the generated artwork concepts are included. Dependencies, generated builds, APKs, reference archives, local configuration, and signing material are ignored. Existing local artifacts remain in `artifacts/`, including the separate F-Droid distribution checkout. Signing-key custody and recovery are documented in the beta publishing runbook; keys are not part of this repository.
