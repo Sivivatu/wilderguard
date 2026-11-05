@@ -115,6 +115,6 @@ test('full screen battle mode keeps controls within a landscape tablet viewport'
   await page.getByRole('button', { name: 'Open game menu' }).click();
   await expect(page.getByRole('button', { name: 'Campaign map' })).toBeVisible();
   await page.getByRole('button', { name: 'Close dialog' }).click();
-  await page.getByRole('button', { name: 'Toggle full screen' }).click();
+  await page.getByRole('button', { name: 'Exit full screen' }).click();
   await expect(page.locator('html')).not.toHaveClass(/battle-focus/);
 });

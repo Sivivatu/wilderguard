@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-test('the approved club, axe and captain sprites all appear in a real wave', async ({ page }) => {
+test('the approved club, axe, captain and thrower sprites all appear in a real wave', async ({ page }) => {
   test.setTimeout(60000);
   const errors: string[] = [];
   page.on('pageerror', error => errors.push(error.message));
@@ -27,7 +27,7 @@ test('the approved club, axe and captain sprites all appear in a real wave', asy
   await page.locator('#start-wave').click();
   for (let i = 0; i < 6; i += 1) await page.clock.runFor(5000);
   const drawn = await page.evaluate(() => (window as unknown as { orcDraws: string[] }).orcDraws);
-  for (const kind of ['clubber', 'axeman', 'chieftain']) {
+  for (const kind of ['clubber', 'axeman', 'chieftain', 'thrower']) {
     expect(drawn.some(url => url.includes(`orc-${kind}`))).toBe(true);
   }
   await page.screenshot({ path: 'artifacts/orc-battle-tablet.png', fullPage: true });

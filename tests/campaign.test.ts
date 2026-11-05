@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { advanceRegion, buildTower, createGame, REGIONS, startWave, tickGame, upgradeTower, useSpell, type TowerType } from '../src/game';
+import { advanceRegion, buildTower, createGame, REGIONS, repairTower, startWave, tickGame, upgradeTower, useSpell, type TowerType } from '../src/game';
 
 describe('full country campaign with earned resources', () => {
   it('can liberate all five regions without free diamonds', () => {
@@ -13,8 +13,10 @@ describe('full country campaign with earned resources', () => {
 
     for (const region of REGIONS) {
       for (let wave = 1; wave <= 5; wave += 1) {
-        // In the last region, improve the four-tower choke point before spreading funds thin.
-        const regionalPlan = state.regionIndex === REGIONS.length - 1 ? plan.slice(0, 4) : plan;
+        // Repair persistent siege damage using earned diamonds before building further.
+        for (const tower of state.towers) state = repairTower(state, tower.id);
+        // In the two hardest regions, improve the four-tower choke point before spreading funds thin.
+        const regionalPlan = state.regionIndex >= REGIONS.length - 2 ? plan.slice(0, 4) : plan;
         for (const placement of regionalPlan) {
           const next = buildTower(state, placement.slot, placement.type);
           if (next !== state) state = next;
@@ -33,6 +35,10 @@ describe('full country campaign with earned resources', () => {
         while (state.phase === 'wave' && elapsed < 500) {
           state = tickGame(state, .1);
           elapsed += .1;
+          // React to siege hits before a damaged defense is destroyed.
+          for (const tower of state.towers) {
+            if (tower.hp < tower.maxHp * .5) state = repairTower(state, tower.id);
+          }
           if (elapsed >= .5) {
             if (state.lives <= 14 && state.inventory.heal > 0) state = useSpell(state, 'heal');
             const visibleEnemies = state.enemies.filter(enemy => enemy.distance >= 0).length;

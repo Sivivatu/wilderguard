@@ -24,8 +24,8 @@ describe('approved Sunburst artwork', () => {
   it('loads a separate bundled sprite for each orc before resolving', async () => {
     const images = stubImages();
     const sprites = await loadOrcArt();
-    expect(Object.keys(sprites)).toEqual(['clubber', 'axeman', 'chieftain']);
-    expect(images).toHaveLength(3);
+    expect(Object.keys(sprites)).toEqual(['clubber', 'axeman', 'chieftain', 'thrower']);
+    expect(images).toHaveLength(4);
     for (const [kind, url] of Object.entries(ORC_ART_URLS)) {
       expect(url).toMatch(/orc-.*\.png$/);
       expect(sprites[kind as keyof typeof sprites].src).toBe(url);
