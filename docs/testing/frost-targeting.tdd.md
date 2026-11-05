@@ -35,7 +35,7 @@ and another test run; startup/artifact failures disappeared when the suite ran
 alone against the completed build. No gameplay or fixture weakening was needed.
 Code and security reviews approved with no critical/high findings. The stale
 current-gameplay description in NOTES.md flagged by review was corrected.
-Release verification is recorded below after completion.
+The signed release verification is recorded below.
 Physical Samsung Tab S4 and F-Droid client update checks remain unverified.
 
 ## Research and implementation scope
@@ -45,3 +45,24 @@ This uses the existing game engine and the platform's Math.random API, with no
 new dependencies. The primary ECMAScript Math.random specification was retrieved
 successfully on 5 November 2026. Test fixtures use deterministic success/failure
 rolls and seeded mixed outcomes rather than statistical pass/fail assertions.
+
+## Signed release verification
+
+GREEN checkpoint `c0b8b49` contains the verified engine and beta 7 build inputs.
+The private manifest `artifacts/beta-frost-targeting-source-manifest.json` records
+88 inputs, SHA-256 `58981675a0c6f6c380af9f0f975502022362d1c6352b647a4937fa2924a1fc2d`.
+All inputs remained unchanged through publication, and every signed APK web asset
+matches the final offline production build.
+
+On 5 November 2026, distribution commit `a8a318e8e1984084b1778ff5f12cd6a5b61271fb`
+and tag `v0.1.0-beta.7` were published. Pages deployment `42023892901` succeeded.
+Independent tag and Pages downloads matched all 24 payload files, both signed
+indexes, permanent pins and all seven APK signatures/hashes. The live feed
+recommends version 7 normally. The APK is 5,172,806 bytes, SHA-256
+`0beb929a7ffcc352fa075d8ed68e404cf96b9f56a050e563307e0f576e19a901`; all six
+previous APKs are unchanged.
+
+Canonical signing state was promoted only after live verification; the previous
+six-release state remains in `artifacts/fdroid-state-before-beta7`. Source stays
+local and unpushed, with the final source/docs checkpoint tagged `v0.1.0-beta.7`.
+Beta 6's tag remains unchanged. Private receipts and verifier remain in artifacts.
