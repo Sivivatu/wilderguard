@@ -1,9 +1,12 @@
-import { expect, test } from 'vitest';
+import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 import {
   advanceRegion, buildTower, createGame, FROST_NOVA, PATH_LENGTH, startWave, tickGame,
   upgradeTower, useSpell, type Enemy, type GameState,
 } from '../src/game';
 import { decodeSave, encodeSave } from '../src/save';
+
+beforeEach(() => vi.spyOn(Math, 'random').mockReturnValue(0));
+afterEach(() => vi.restoreAllMocks());
 
 function prepareEnemy(
   { distance, hp = 100, slow = 0, frostNovaTime = undefined }: Partial<Enemy> & Pick<Enemy, 'distance'>,

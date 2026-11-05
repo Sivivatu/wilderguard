@@ -1,8 +1,10 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   advanceRegion, buildTower, createGame, MAX_TOWER_LEVEL, REGIONS, sellTower, startWave,
   tickGame, TOWER_TYPES, upgradeTower, useSpell, type GameState,
 } from '../src/game';
+
+afterEach(() => vi.restoreAllMocks());
 
 function finishWave(state: GameState) {
   let current = state;
@@ -164,6 +166,7 @@ describe('tower defense campaign', () => {
   });
 
   it('slows a nearby enemy with frost and damages nearby enemies with cannon splash', () => {
+    vi.spyOn(Math, 'random').mockReturnValue(0);
     let frostWave = startWave(buildTower(createGame(0, 1000), 1, 'frost'));
     frostWave = { ...frostWave, enemies: frostWave.enemies.map(enemy => ({ ...enemy, distance: 480 })) };
     const frosted = tickGame(frostWave, 0.1);

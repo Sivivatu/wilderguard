@@ -31,7 +31,7 @@ test('a newly arriving unchilled enemy becomes preferred on the next ready shot'
   while (state.enemies[1].hp === 100 && steps++ < 15) state = tickGame(state, .1);
   expect(state.enemies[0].hp).toBe(92);
   expect(state.enemies[1]).toMatchObject({ hp: 92, slow: 2 });
-  expect(state.shots.at(-1)?.to).toEqual(pointOnPath(state.enemies[1].distance));
+  expect(state.shots[state.shots.length - 1]?.to).toEqual(pointOnPath(state.enemies[1].distance));
 });
 
 test('Frost keeps firing when every enemy in range is chilled', () => {

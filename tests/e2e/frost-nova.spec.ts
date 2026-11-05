@@ -5,6 +5,7 @@ test('a level 3 Frost kill draws an icy burst and the guide explains contagion',
   page.on('pageerror', error => errors.push(error.message));
   await page.clock.install();
   await page.addInitScript(() => {
+    Math.random = () => 0; // Exercise a successful chill deterministically.
     localStorage.setItem('wilderguard-campaign-v1', JSON.stringify({
       version: 1, regionIndex: 0, diamonds: 120, lives: 20, wave: 0, kills: 0,
       towers: [{ id: 'tower-1', slotId: 1, type: 'frost', level: 3 }],

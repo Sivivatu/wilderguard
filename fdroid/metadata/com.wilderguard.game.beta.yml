@@ -15,9 +15,11 @@ Description: |
   Watch castle and tower health, repair damaged towers and counter ranged
   axe-throwing orcs with soldiers. Fullscreen controls adapt to your device.
 
+  Frost towers prefer unchilled enemies, with an 85% chance to apply slow.
+
   This is an early beta in a developer-operated custom F-Droid repository.
   There are no accounts, advertising, tracking, or in-app purchases.
   Saved progress stays on the device. The beta installs separately from the
   original debug preview and does not import that preview's saved progress.
-CurrentVersion: 0.1.0-beta.6
-CurrentVersionCode: 6
+CurrentVersion: 0.1.0-beta.7
+CurrentVersionCode: 7

@@ -1,8 +1,15 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { advanceRegion, buildTower, createGame, REGIONS, repairTower, startWave, tickGame, upgradeTower, useSpell, type TowerType } from '../src/game';
 
+afterEach(() => vi.restoreAllMocks());
+
 describe('full country campaign with earned resources', () => {
-  it('can liberate all five regions without free diamonds', () => {
+  it.each([1, 7, 42])('can liberate all five regions without free diamonds with chill seed %i', seed => {
+    let randomState = seed;
+    vi.spyOn(Math, 'random').mockImplementation(() => {
+      randomState = (Math.imul(randomState, 1664525) + 1013904223) >>> 0;
+      return randomState / 4294967296;
+    });
     let state = createGame();
     const history: string[] = [];
     const plan: Array<{ slot: number; type: TowerType }> = [

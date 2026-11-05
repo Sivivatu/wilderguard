@@ -21,7 +21,7 @@ export interface GameState {
 }
 export const WAVES_PER_REGION = 5;
 export const MAX_TOWER_LEVEL = 3;
-export const EFFECTS = { frostSpeed: .5, frostSeconds: 2, freezeSpeed: .12, freezeSeconds: 6, healHealth: 6, maxHealth: 20, splashDistance: 65 } as const;
+export const EFFECTS = { frostSpeed: .5, frostSeconds: 2, frostChance: .85, freezeSpeed: .12, freezeSeconds: 6, healHealth: 6, maxHealth: 20, splashDistance: 65 } as const;
 export const FROST_NOVA = { radius: 90, life: .65, level: 3 } as const;
 export const REGIONS = [
   { name: 'The Greenfields', subtitle: 'Where your story begins', biome: 'Meadow', color: '#89ad65', monster: 'Greenfield club orcs', difficulty: 'Gentle beginnings' },
@@ -33,7 +33,7 @@ export const REGIONS = [
 export const TOWER_TYPES: Record<TowerType, { name: string; cost: number; damage: number; range: number; interval: number; description: string; color: string }> = {
   archer: { name: 'Archer tower', cost: 70, damage: 15, range: 185, interval: .7, description: 'Quick shots. Steady aim.', color: '#57875c' },
   cannon: { name: 'Cannon tower', cost: 100, damage: 35, range: 170, interval: 1.65, description: 'A little more firepower.', color: '#a17c50' },
-  frost: { name: 'Frost tower', cost: 85, damage: 8, range: 165, interval: .8, description: 'Slow every target you hit.', color: '#6f9fa3' },
+  frost: { name: 'Frost tower', cost: 85, damage: 8, range: 165, interval: .8, description: `${EFFECTS.frostChance * 100}% chance to chill. Prefers unchilled mobs.`, color: '#6f9fa3' },
 };
 export function towerStats(type: TowerType, level: number) {
   const base = TOWER_TYPES[type];
@@ -124,15 +124,17 @@ function fireTowers(towers: Tower[], moved: Enemy[], dt: number, regionIndex: nu
     if (cooldown > 0) return { ...tower, cooldown };
     const position = SLOTS.find(slot => slot.id === tower.slotId)!;
     const stats = towerStats(tower.type, tower.level);
-    const target = enemies.filter(enemy => enemy.hp > 0 && enemy.distance >= 0 && enemy.distance < pathLengthForRegion(regionIndex))
-      .find(enemy => { const point = pointOnPath(enemy.distance, regionIndex); return Math.hypot(point.x - position.x, point.y - position.y) <= stats.range; });
+    const candidates = enemies.filter(enemy => enemy.hp > 0 && enemy.distance >= 0 && enemy.distance < pathLengthForRegion(regionIndex))
+      .filter(enemy => { const point = pointOnPath(enemy.distance, regionIndex); return Math.hypot(point.x - position.x, point.y - position.y) <= stats.range; });
+    const target = (tower.type === 'frost' ? candidates.find(enemy => enemy.slow <= 0) : undefined) ?? candidates[0];
     if (!target) return { ...tower, cooldown: 0 };
     const point = pointOnPath(target.distance, regionIndex);
     const damage = stats.damage;
+    const appliesChill = tower.type === 'frost' && Math.random() < EFFECTS.frostChance;
     enemies = enemies.map(enemy => {
       const hit = enemy.id === target.id || (tower.type === 'cannon' && enemy.distance >= 0 && Math.abs(enemy.distance - target.distance) < EFFECTS.splashDistance);
-      return hit ? { ...enemy, hp: enemy.hp - damage, slow: tower.type === 'frost' ? EFFECTS.frostSeconds : enemy.slow,
-        frostNovaTime: tower.type === 'frost' && tower.level === FROST_NOVA.level ? EFFECTS.frostSeconds : enemy.frostNovaTime } : enemy;
+      return hit ? { ...enemy, hp: enemy.hp - damage, slow: appliesChill ? EFFECTS.frostSeconds : enemy.slow,
+        frostNovaTime: appliesChill && tower.level === FROST_NOVA.level ? EFFECTS.frostSeconds : enemy.frostNovaTime } : enemy;
     });
     shots = [...shots, { from: { x: position.x, y: position.y - 27 }, to: point, type: tower.type, life: .2 }];
     return { ...tower, cooldown: stats.interval };
