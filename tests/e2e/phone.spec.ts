@@ -159,8 +159,9 @@ test('tower and ability details are touch-accessible and preserve resources', as
   await expect(dialog).toContainText(/15 damage/i);
   await expect(dialog).toContainText(/0\.7 seconds/i);
   await expect(dialog).toContainText(/frost/i);
-  await expect(dialog).toContainText('85% chance');
-  await expect(dialog).toContainText('15%');
+  await expect(dialog).toContainText('35% chill (65% failure)');
+  await expect(dialog).toContainText('50% chill (50% failure)');
+  await expect(dialog).toContainText('85% chill (15% failure)');
   await expect(dialog).toContainText('not already chilled');
   await expect(dialog).toContainText(/50%.*2 seconds/i);
   await expect(dialog).toContainText(/88%.*6 seconds/i);

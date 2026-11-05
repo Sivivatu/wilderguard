@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
-import { buildTower, createGame, PATH_LENGTH, pointOnPath, startWave, tickGame, towerStats, type Enemy, type GameState, type TowerType } from '../src/game';
+import { buildTower, createGame, PATH_LENGTH, pointOnPath, startWave, tickGame, towerStats, upgradeTower, type Enemy, type GameState, type TowerType } from '../src/game';
 import { defenseGuide, towerSummary } from '../src/defense-guide';
 
 beforeEach(() => vi.spyOn(Math, 'random').mockReturnValue(0));
@@ -56,13 +56,28 @@ test.each(['archer', 'cannon'] as const)('%s keeps its existing target order', t
   expect(result.enemies.map(mob => mob.hp)).toEqual([100 - towerStats(type, 1).damage, 100]);
 });
 
-test.each([0, .849999, .85, .999999])('Frost applies chill only below the 85 percent chance boundary (roll %s)', roll => {
+const chances = [{ level: 1, chance: .35 }, { level: 2, chance: .5 }, { level: 3, chance: .85 }];
+test.each(chances.flatMap(({ level, chance }) => [0, chance - .000001, chance, .999999].map(roll => ({ level, chance, roll }))))(
+  'level $level applies chill only below $chance (roll $roll)', ({ level, chance, roll }) => {
   vi.mocked(Math.random).mockReturnValue(roll);
-  const result = tickGame(wave([enemy(1)], 'frost', 3), .1);
-  expect(result.enemies[0].hp).toBeCloseTo(80.8);
-  expect(result.enemies[0].slow).toBe(roll < .85 ? 2 : 0);
-  expect(result.enemies[0].frostNovaTime ?? 0).toBe(roll < .85 ? 2 : 0);
+  const result = tickGame(wave([enemy(1)], 'frost', level), .1);
+  expect(result.enemies[0].hp).toBeCloseTo(100 - towerStats('frost', level).damage);
+  expect(result.enemies[0].slow).toBe(roll < chance ? 2 : 0);
+  expect(result.enemies[0].frostNovaTime ?? 0).toBe(level === 3 && roll < chance ? 2 : 0);
   expect(Math.random).toHaveBeenCalledTimes(1);
+});
+
+test.each([{ level: 1, roll: .4 }, { level: 2, roll: .7 }])(
+  'upgrading level $level improves the chance on its next shot', ({ level, roll }) => {
+  vi.mocked(Math.random).mockReturnValue(roll);
+  let state = tickGame(wave([enemy(1)], 'frost', level), .1);
+  expect(state.enemies[0].slow).toBe(0);
+  const hpBeforeUpgrade = state.enemies[0].hp;
+  state = upgradeTower(state, state.towers[0].id);
+  let steps = 0;
+  while (state.enemies[0].hp === hpBeforeUpgrade && steps++ < 10) state = tickGame(state, .1);
+  expect(state.enemies[0].slow).toBe(2);
+  expect(state.towers[0].level).toBe(level + 1);
 });
 
 test('a failed Frost hit preserves remaining chill and nova duration without refreshing them', () => {
@@ -97,8 +112,12 @@ test('Deep Freeze does not prevent choosing an enemy without a tower chill', () 
 
 test('tower details state the actual chance, failure rate and targeting preference', () => {
   const guide = defenseGuide(0);
-  expect(guide).toContain('85% chance');
-  expect(guide).toContain('15%');
   expect(guide).toContain('not already chilled');
-  expect(towerSummary('frost', 1)).toContain('85% chill');
+  for (const { level, chance } of chances) {
+    const success = Math.round(chance * 100);
+    const failure = 100 - success;
+    expect(guide).toContain(`${success}% chill`);
+    expect(guide).toContain(`${failure}% failure`);
+    expect(towerSummary('frost', level)).toContain(`${success}% chill (${failure}% failure)`);
+  }
 });
