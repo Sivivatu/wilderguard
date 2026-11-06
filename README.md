@@ -40,7 +40,7 @@ Win diamonds after every wave. On wave 3, earn a Deep Freeze spell; on wave 5, e
 
 Pause or play at 2× speed to adjust how the game feels. Supported browsers have a working fullscreen enter/exit control; the control is hidden in the Android app, installed web app and unsupported browsers. In the Android app or when installed to your home screen, the game opens directly into a touch-friendly battle view. Progress saves on this device between waves; existing beta saves give their towers full health. If monsters win, you can retry from your last saved setup, including its tower health. Your diamonds and spells carry to the next region, where you choose new towers.
 
-Each battlefield uses a distinct pixelated photographic background in the approved Sunburst style B, with its own road drawn in Canvas. The campaign map uses SVG. Orcs use pixelated artwork generated from the concepts Eric selected. The game bundles all five backgrounds, four sprites and fonts, so battles also work offline. Wilderguard has no accounts, game server, tracking, advertising, or in-app purchases. The Samsung Galaxy Tab S4 in landscape is the target device.
+Each battlefield uses a distinct pixelated photographic background in the approved Sunburst style B, with its own road drawn in Canvas. The campaign map uses SVG. Orcs use pixelated artwork generated from the concepts Eric selected. The game bundles all five backgrounds, four sprites and fonts, so battles also work offline. Wilderguard has no accounts, game server, gameplay analytics, advertising, or in-app purchases. Published beta 8 has no reporting. This worktree implements automatic Sentry error reports with a privacy notice and off switch, configured for a free-only EU project in local validation builds. No reporting-enabled release has been published. See [error reporting and privacy](docs/error-reporting.md). The Samsung Galaxy Tab S4 in landscape is the target device.
 
 ## Play in a browser
 
@@ -79,6 +79,7 @@ npm test                         # game and save-file unit tests
 npm run test:coverage             # coverage report
 npx playwright install chromium   # install the browser for the end-to-end tests
 npm run test:e2e                  # browser end-to-end tests
+npm run test:reporting            # local intercepted error/offline delivery fixture
 npm run build                     # type-check, build, and bundle offline assets
 npm run android:sync              # rebuild web assets and sync Android
 npm run android:apk               # build the debug APK

@@ -1,0 +1,54 @@
+# Sentry error reporting
+
+Implementation prepared 6 November 2026 in the isolated `feat/sentry-error-reporting` worktree. The owner subsequently authorized a commit and push for code review; app release publication remains separate. Reporting is enabled in local validation builds only. Published beta 8 has no reporting. This feature does not change its version number, signing identities or existing feed.
+
+The owner selected **automatic reports with a privacy notice and an off switch**, using **Sentry Cloud EU**, with **€0/month: free plan only, no paid overages**. The EU project is [Databard / Wilderguard](https://databard.sentry.io/settings/projects/wilderguard/) (`4512385338966096`), owned by the Databard team. The existing organization is on the free Developer plan: price 0, no trial, `allowOnDemand=false`, `hasOnDemandModes=false`, and `onDemandMaxSpend=0`, verified through the authenticated EU customer API. No organization billing settings were changed. The free quota is shared with other projects and reports can be dropped when it is exhausted; the SDK cannot enforce billing policy. The public EU DSN is in this worktree's ignored `.env.local`. Reporting remains disabled without complete valid build configuration. No analytics, session replay, screenshots, performance monitoring, session health or gameplay/balance changes are included.
+
+## Data and behavior
+
+The bootstrap displays a first-run notice before starting reporting, independently of game initialization. Settings always shows the privacy text and reporting switch. The preference uses `wilderguard-error-reporting-v1`, separate from `wilderguard-campaign-v1`; restarting the adventure does not reset privacy choices. The notice acknowledgment is stored separately. Revocation gates new reports immediately, closes the SDK and clears reporting caches. Requests already in flight cannot be recalled. Cache failures make reporting unavailable and must never interrupt gameplay.
+
+Allowed outbound data is the error event ID/time, exception type, at most three unhandled exceptions and 50 stack frames per exception (safe bundle/Java filenames, function/module identifiers, line/column and native instruction/image addresses), platform, app release, build and `beta`/`public` environment. Messages are replaced with `[redacted]`. No arbitrary tags, device/user identifiers, device context, breadcrumbs, request URLs, contact details, location, saves, extra properties, source snippets or attachments pass the filters. Native events are filtered again at the HTTP transport, including events retrieved from disk. NDK crashed-thread frames are copied into the sanitized exception; other threads and memory attachments are discarded.
+
+Sentry receives the sender's network address as part of delivering any HTTPS request. Project-side IP scrubbing and default sensitive-data filtering are enabled. IP scrubbing alone still retained inferred city/country in the first synthetic events. The project now also applies `@anything:remove` to `user.geo.**` and `user.ip_address`; a fresh retrieved Cloud event confirmed empty geographic data and no stored IP. Source scraping is disabled and `storeCrashReports=0`. Provider retention and deletion are controlled in the Sentry account, not by the game's off switch. These settings describe stored event data, not a promise about all provider networking/security logs.
+
+Only unhandled JavaScript errors/rejections and Android JVM/NDK crashes are in scope. A temporary in-memory buffer retains at most five early Error objects for up to five seconds while the SDK loads, then removes its listeners; late SDK startup can miss errors outside that window. Reporting does not block game initialization or save operations. Handled errors/messages, logs, sessions, ANR/app-hang reporting, replay, metrics, profiling and tracing are disabled; only event items may leave Android. This is not a guarantee of detecting freezes, WebView renderer death, OS process kills or every out-of-memory failure.
+
+## Offline limits
+
+Browser: official IndexedDB offline transport, at most 10 envelopes, oldest queued reports retained when full; startup/reconnect retry uses the SDK's backoff. Android: official native disk/HTTP transport, cache and processing queue capped at 10 SDK items. JVM exceptions and JS reports are sanitized before normal transport caching. The app neither waits for delivery nor flushes reporting in its animation loop. There is no app-defined retention expiry; records may remain until delivered, evicted, opt-out or OS cache removal.
+
+NDK fatal diagnostics can be written to private local SDK files before Java filtering. Raw tombstone upload, screenshots, attachments and NDK scope sync are disabled. Raw local native crash files are not guaranteed to contain only the outbound allowlist; the Java filter cannot execute inside every fatal signal handler. Cache item limits are SDK limits, not a total disk-byte quota. If policy later requires absolutely no raw local crash diagnostics, NDK capture must be disabled. This limitation requires separate device validation, especially repeated offline native crashes.
+
+Explicitly re-enabling also requires a successful purge before the durable off preference is changed, and waits for previous SDK shutdown. Generation checks reject stale startup tasks after rapid toggles. Changing destination requires both cache purges to succeed before initializing the new SDK. A cache failure leaves reporting unavailable. Android initialization validates that environment, release and build match the installed package, preventing a public APK from being tagged beta. Beta and public use the same minimal data policy; configure separate projects/keys or quotas if operational separation is needed.
+
+## Cloud setup and local build
+
+1. The intended EU account is connected through hosted Composio. Project creation used `platform=javascript`: the Cloud API rejected `javascript-capacitor`; this UI classification does not change the official Capacitor SDK integration. Default alert rules were not created. Preserve the verified free-only billing policy and project privacy settings above; review the provider's current retention/quota policy and any desired notifications before release. Do not enable a paid plan or change organization billing without separate authorization.
+2. Copy `.env.example` to ignored `.env.local`; set the public EU ingestion DSN, `VITE_SENTRY_ENVIRONMENT`, `VITE_SENTRY_RELEASE` and `VITE_SENTRY_DIST`. For the current unmodified beta metadata, release is `com.wilderguard.game.beta@0.1.0-beta.8+8`, dist `8`, environment `beta`. Any eventual release must receive its own new version under the release workflow. Do not distribute this validation build as a replacement beta 8.
+3. Run `npm run android:beta` with JDK 17 and the Android SDK configured. The SDK versions are pinned: Capacitor Sentry 4.5.0, JS sibling 10.76.2 and Android 8.61.0. The app's direct Android dependency must stay aligned with the Capacitor plugin.
+4. DSNs are public ingestion keys and are shipped intentionally. Never put auth tokens, API credentials or signing passwords in `VITE_*`, Gradle files or APK assets. No upload plugin, Sentry CLI credential or source-repository integration is required.
+
+Incomplete/invalid configuration disables reporting. Only EU Cloud ingestion hosts are accepted. The `.env.example` contains no real DSN. In this T3/Codex session, hosted Composio tool discovery, account connection, EU organization/project reads and project writes succeeded. A real app-SDK JavaScript event was then retrieved from the intended Cloud project; this is separate from local transport tests and native-device verification.
+
+## Private local stack debugging
+
+`npm run build` creates hidden source maps with `sourcesContent` excluded. The archive script checks maps, moves them out of the web output **before** offline-cache generation/Capacitor sync, and keeps matching minified bundles in ignored `artifacts/error-symbols/<bundle-hash>/assets`. No map links, maps or original sources are shipped by this workflow. Preserve the matching build artifact and source revision privately for each APK. The hash distinguishes uncommitted builds; the archive does not independently establish Git provenance.
+
+Use a reported `app:///assets/<bundle>.js` filename to find its matching local map:
+
+```sh
+npm run errors:symbolicate -- artifacts/error-symbols/<hash>/assets/<bundle>.js.map <line> <column>
+```
+
+Reported stack positions are 1-based; the command converts the column to the source-map convention and prints the local source filename/position/name. The original source remains in the local checkout. Native Java stacks retain class/function/line information; native signal reports retain addresses but may lack readable symbols because debug images and native symbol files are not uploaded. Readable NDK stacks remain unverified.
+
+Source-free maps still reveal source filenames and identifiers and have not been authorized for upload. No source maps, embedded sources, repositories, symbols or source archives are uploaded. A future source-free artifact upload needs its own decision; local symbolication works without granting Sentry source access.
+
+## Verification stages
+
+Run `npm run test:coverage`, `npm run test:e2e`, `npm run test:reporting`, `npm run test:release`, and native `testBetaUnitTest assembleBeta`. `test:reporting` builds a separate ignored fixture with an invented EU DSN and intercepts all requests to that host locally. It tests real SDK envelopes, privacy/off behavior and bounded offline retry; it is not Cloud ingestion evidence.
+
+Actual app-SDK JavaScript delivery and local symbolication passed against the intended EU project and release. Native JVM/NDK delivery, native offline restart/reconnect and hardware overhead remain to be checked. The test emulator was blocked by Android launcher's ANR dialog, and the supported device tool could not dismiss it; this is not evidence of a Wilderguard ANR. A JVM test crash will not prove NDK signal capture. Check duplicate rate, native queue bounds, startup/CPU/memory/battery on the Tab S4, JVM stack locations and separate NDK delivery. Temporary validation controls were confined to ignored generated assets and must be absent from the clean APK. No crash button is included in tracked game source.
+
+Build success, unit filters, local intercepted envelopes, Cloud ingestion, readable stacks, and physical-device performance are separate evidence stages. Physical Tab S4/F-Droid update testing remains unverified. See [testing/error-reporting.md](testing/error-reporting.md) for this worktree's actual results.
