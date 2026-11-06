@@ -24,7 +24,11 @@ describe('full country campaign with earned resources', () => {
         for (const tower of state.towers) state = repairTower(state, tower.id);
         // In the two hardest regions, improve the four-tower choke point before spreading funds thin.
         const regionalPlan = state.regionIndex >= REGIONS.length - 2 ? plan.slice(0, 4) : plan;
-        for (const placement of regionalPlan) {
+        // Hollow Crown's road passes pad 3 twice: use that coverage for the first Archer.
+        const placements = state.regionIndex === REGIONS.length - 1
+          ? regionalPlan.map(placement => placement.slot === 2 ? { ...placement, slot: 3 } : placement)
+          : regionalPlan;
+        for (const placement of placements) {
           const next = buildTower(state, placement.slot, placement.type);
           if (next !== state) state = next;
         }

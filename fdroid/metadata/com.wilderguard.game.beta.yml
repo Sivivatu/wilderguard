@@ -18,9 +18,11 @@ Description: |
   Frost towers prefer unchilled enemies. Chill chance improves from 35% at
   level 1 to 50% at level 2 and 85% at level 3.
 
+  Every tower pad has useful road coverage, including central Frostfall Pass.
+
   This is an early beta in a developer-operated custom F-Droid repository.
   There are no accounts, advertising, tracking, or in-app purchases.
   Saved progress stays on the device. The beta installs separately from the
   original debug preview and does not import that preview's saved progress.
-CurrentVersion: 0.1.0-beta.8
-CurrentVersionCode: 8
+CurrentVersion: 0.1.0-beta.9
+CurrentVersionCode: 9
