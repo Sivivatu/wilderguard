@@ -1,5 +1,7 @@
 # Wilderguard
 
+Public source: [Sivivatu/wilderguard](https://github.com/Sivivatu/wilderguard). Signed APKs can also be downloaded from [GitHub Releases](https://github.com/Sivivatu/wilderguard/releases); existing F-Droid installations keep using the feed below. See [source, releases and publication](docs/publication.md).
+
 **Made by Eric, a 7-year-old boy.**
 
 A pixel-art tower-defense adventure through Elderglen: five places to free, five waves in each, and a little kingdom worth protecting. Build your defenses, hold back waves of orcs, and bring the country home.
@@ -92,7 +94,9 @@ A post-install compatibility patch keeps Capacitor CLI 6 working with the patche
 
 See [NOTES.md](NOTES.md) for Eric’s original idea and the work still needed before a wider release. See [fdroid/README.md](fdroid/README.md) for the beta publishing runbook.
 
-## Local version control
+## Original local version control
+
+The following records the setup before the owner authorized public publication. See [the publication workflow](docs/publication.md) for the current repository and release locations.
 
 The complete project is tracked in a local Git repository on `main`, with source checkpoints tagged `v0.1.0-beta.2` through `v0.1.0-beta.8`. The source repository has no remote and has not been pushed. Android install material is published separately through the existing F-Droid distribution repository.
 

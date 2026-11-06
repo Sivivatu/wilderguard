@@ -83,10 +83,15 @@ The source manifest is sensitive build provenance and stays private. Keep the pe
 4. Keep signing state, release manifest, and source provenance private and apart from the static public payload.
 5. Check advisories with `npm audit` for every release; the dependency set may change. A prior clean audit does not promise a future one.
 6. There is no CI secret mirror. All release signing and feed generation happens locally using the dedicated vault path.
+### Error-reporting release gate
+
+Published beta 8 remains unchanged and has no Sentry reporting. This worktree prepares automatic error-only reporting with a privacy notice/off switch for a future configured EU build. Before publishing such a release, complete [Sentry setup and delivery/device validation](../docs/error-reporting.md), verify the selected €0/free-only policy with no paid overages, inspect the signed APK for maps/credentials, and update feed privacy/anti-feature disclosures to match actual behavior. Preserve local symbolication artifacts privately. This code review does not publish a reporting-enabled app release. See [public source and APK releases](../docs/publication.md) for the separate publication workflow.
+
+Code-review commits and pushes do not publish an app release. Version tags record source checkpoints and the separate binary-distribution commits. Publication explicitly builds and signs a new numbered APK, generates signed F-Droid indexes, and publishes the validated binary-only payload through the distribution repository and Pages. Creating a source tag alone does not run that process.
 
 ## Licensing and testing status
 
-The F-Droid metadata currently uses `License: Unknown`; Eric has not chosen a source-code or app license. Do not mark this project open source or claim the source is available until the creator and family choose and publish an appropriate license and source repository.
+The F-Droid metadata currently uses `License: Unknown`; Eric has not chosen a source-code or app license. The owner has authorized public source publication to [Sivivatu/wilderguard](https://github.com/Sivivatu/wilderguard). Public source visibility does not establish an open-source license or eligibility for F-Droid's official catalog; keep the license field unchanged until the creator and family select an appropriate license.
 
 Beta `0.1.0-beta.4` (versionCode 4) is published with level 3 Frost nova. Refresh F-Droid or download the [signed APK](https://sivivatu.github.io/wilderguard-beta/fdroid/repo/com.wilderguard.game.beta_4.apk). On 1 November 2026, independent HTTPS downloads verified all 21 payload files, all four APK hashes and v1/v2 signatures, permanent signing pins, both signed index formats, v1 suggested version 4 and v2 normal release channels. Betas 1–3 remain unchanged. Physical Samsung Tab S4 installation and an actual F-Droid client update remain unverified.
 
@@ -109,9 +114,3 @@ Beta 7 source manifest: `artifacts/beta-frost-targeting-source-manifest.json`, S
 **Beta 8 check (5 November 2026):** Pages deployment `42067570304` succeeded from distribution commit `1dab5c1ec80e2ad339e3330b485c3e431a829d69`, tagged `v0.1.0-beta.8`. Independent tag and Pages downloads matched all 25 public files and verified both signed indexes, all eight APK hashes and v1/v2 signatures, permanent pins, v1 suggested version 8 and v2 normal release channels. The APK is 5,172,806 bytes, SHA-256 `1d6dbe788758dce5190b557c3eb1e665a565d89993d90c1c320f699d6d11d03a`. All earlier APKs are unchanged.
 
 Beta 8 source manifest: `artifacts/beta-frost-levels-source-manifest.json`, SHA-256 `c92cc760caa955598dd367cfa00b737c2c7e7d153edb64a1dc5b53471b232c49` (88 inputs), matching source commit `b842860ed66d8565329e31036d0ef589a27be9d5`. Canonical state retains eight releases; its seven-release backup is `artifacts/fdroid-state-before-beta8`. Private receipts and checks are in `artifacts/beta8-verification.json`, `artifacts/verify-beta8-pages.py`, `artifacts/fdroid-beta8-live-check` and `artifacts/fdroid-beta8-tag-live-check`. The final source/docs checkpoint is tagged locally as `v0.1.0-beta.8`; source remains unpushed. Physical Android and actual F-Droid client updates remain unverified.
-
-### Error-reporting release gate
-
-Published beta 8 remains unchanged and has no Sentry reporting. This worktree prepares automatic error-only reporting with a privacy notice/off switch for a future configured EU build. Before publishing such a release, complete [Sentry setup and delivery/device validation](../docs/error-reporting.md), verify the selected €0/free-only policy with no paid overages, inspect the signed APK for maps/credentials, and update feed privacy/anti-feature disclosures to match actual behavior. Preserve local symbolication artifacts privately. No release or publication is authorized by this implementation task.
-
-Code-review commits and pushes do not publish an app release. Version tags record source checkpoints and the separate binary-distribution commits. Publication explicitly builds and signs a new numbered APK, generates signed F-Droid indexes, and publishes the validated binary-only payload through the distribution repository and Pages. Creating a source tag alone does not run that process.

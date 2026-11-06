@@ -1,6 +1,6 @@
 # Sentry error reporting
 
-Implementation prepared 6 November 2026 in the isolated `feat/sentry-error-reporting` worktree. The owner subsequently authorized a commit and push for code review; app release publication remains separate. Reporting is enabled in local validation builds only. Published beta 8 has no reporting. This feature does not change its version number, signing identities or existing feed.
+Implementation prepared 6 November 2026 in the isolated `feat/sentry-error-reporting` worktree. The owner subsequently authorized a commit and push for code review, then public source publication to [Sivivatu/wilderguard](https://github.com/Sivivatu/wilderguard). Reporting is enabled in local validation builds only; no reporting-enabled app release is published by this change. Published beta 8 has no reporting. This feature does not change its version number, signing identities or existing feed. Existing beta 9 release downloads are handled separately as described in [publication](publication.md).
 
 The owner selected **automatic reports with a privacy notice and an off switch**, using **Sentry Cloud EU**, with **€0/month: free plan only, no paid overages**. The EU project is [Databard / Wilderguard](https://databard.sentry.io/settings/projects/wilderguard/) (`4512385338966096`), owned by the Databard team. The existing organization is on the free Developer plan: price 0, no trial, `allowOnDemand=false`, `hasOnDemandModes=false`, and `onDemandMaxSpend=0`, verified through the authenticated EU customer API. No organization billing settings were changed. The free quota is shared with other projects and reports can be dropped when it is exhausted; the SDK cannot enforce billing policy. The public EU DSN is in this worktree's ignored `.env.local`. Reporting remains disabled without complete valid build configuration. No analytics, session replay, screenshots, performance monitoring, session health or gameplay/balance changes are included.
 
@@ -43,7 +43,7 @@ npm run errors:symbolicate -- artifacts/error-symbols/<hash>/assets/<bundle>.js.
 
 Reported stack positions are 1-based; the command converts the column to the source-map convention and prints the local source filename/position/name. The original source remains in the local checkout. Native Java stacks retain class/function/line information; native signal reports retain addresses but may lack readable symbols because debug images and native symbol files are not uploaded. Readable NDK stacks remain unverified.
 
-Source-free maps still reveal source filenames and identifiers and have not been authorized for upload. No source maps, embedded sources, repositories, symbols or source archives are uploaded. A future source-free artifact upload needs its own decision; local symbolication works without granting Sentry source access.
+Source-free maps still reveal source filenames and identifiers and have not been authorized for upload to Sentry. No source maps, embedded sources, repositories, symbols or source archives are uploaded to Sentry. Public GitHub source publication is a separate owner-authorized action. A future debugging-artifact upload needs its own decision; local symbolication works without granting Sentry source access.
 
 ## Verification stages
 

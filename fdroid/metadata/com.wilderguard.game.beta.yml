@@ -1,3 +1,5 @@
+# Before a future reporting-enabled release, update privacy disclosures and
+# anti-features to match docs/error-reporting.md. Published beta 8 has no reporting.
 Categories:
   - Games
 License: Unknown
@@ -24,6 +26,3 @@ Description: |
   original debug preview and does not import that preview's saved progress.
 CurrentVersion: 0.1.0-beta.8
 CurrentVersionCode: 8
-
-# Published beta 8 has no reporting. Before a future reporting-enabled release,
-# update description/privacy URL/anti-features to match docs/error-reporting.md.
