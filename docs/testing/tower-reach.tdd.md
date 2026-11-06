@@ -48,3 +48,25 @@ freeing the completed Gradle daemon to avoid build-machine memory pressure.
 
 Code and security reviews approved with no findings. The change adds no
 credentials, Android permissions, external calls or telemetry.
+
+## Signed release verification
+
+GREEN checkpoint `7d46648c6b2258d2771c9cd90685f8d76a4d7024` contains the beta 9
+build inputs. The private manifest `artifacts/beta-tower-reach-source-manifest.json`
+records 88 inputs, SHA-256
+`b9e7f6465c91c6d5f5e346e5430fc07fe8339d13bf20227a75bb7dddc0580c47`.
+All inputs remained unchanged through publication, and all embedded signed APK
+web assets match the final offline build.
+
+On 6 November 2026, distribution commit `0fef51fdcf41d86148edc70248bfe00eeef2854d`
+and tag `v0.1.0-beta.9` were published. Pages deployment `42213863904` succeeded.
+Independent tag and Pages downloads matched all 26 public files and verified
+both signed indexes, permanent pins and all nine APK signatures/hashes.
+The feed recommends version 9 normally. The APK is 5,172,806 bytes, SHA-256
+`286e4d73d783ab36565293585215977ab4a31941d241acf50cd5eae3e16662fe`.
+All eight earlier APKs remain unchanged.
+
+Canonical signing state was promoted only after live verification, preserving
+the eight-release state in `artifacts/fdroid-state-before-beta9`. The source stays
+local and unpushed, with the final source/docs checkpoint tagged `v0.1.0-beta.9`.
+The beta 8 reference remains unchanged. Private receipts remain in artifacts.
