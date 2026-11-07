@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   BUILD_SLOTS, nearRegionPath, nearestRegionDistance, pathForRegion, pathLengthForRegion, pointOnRegionPath,
 } from '../src/region-geometry';
+import { TOWER_TYPES } from '../src/game';
 
 const greenfields = [
   { x: -45, y: 310 }, { x: 175, y: 310 }, { x: 245, y: 250 }, { x: 245, y: 170 },
@@ -44,7 +45,8 @@ describe('regional battlefield geometry', () => {
         const nearest = pointOnRegionPath(region, nearestRegionDistance(region, x, y));
         const clearance = Math.hypot(nearest.x - x, nearest.y - y);
         expect(clearance, `region ${region}, pad ${x},${y}`).toBeGreaterThanOrEqual(34);
-        expect(clearance, `region ${region}, pad ${x},${y}`).toBeLessThanOrEqual(180);
+        const shortestTowerRange = Math.min(...Object.values(TOWER_TYPES).map(tower => tower.range));
+        expect(clearance, `region ${region}, pad ${x},${y}`).toBeLessThanOrEqual(shortestTowerRange);
       }
     }
   });

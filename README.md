@@ -8,9 +8,9 @@ A pixel-art tower-defense adventure through Elderglen: five places to free, five
 
 ## Unlisted Android beta
 
-Wilderguard Beta (`com.wilderguard.game.beta`, version `0.1.0-beta.8`, versionCode 8) gives Frost towers a 35% chill chance at level 1, 50% at level 2 and 85% at level 3, while preferring unchilled mobs. It includes visible castle and tower health, paid tower repairs, ranged axe-throwing orcs and working fullscreen controls where supported. Other features include purchase confirmations, independently trained soldiers, five distinct roads with approved pixelated photographic terrain, the compact phone interface, tower/spell guide, and contagious level 3 Frost nova. It is separate from the original Android preview and does not import that preview's saved progress. Updates from an earlier beta preserve the beta's checkpoint saves. This is a developer-run repository, **not an app in F-Droid’s official catalog**. Anyone who has the public link can access its downloads; “unlisted” does not provide privacy or access control.
+Wilderguard Beta (`com.wilderguard.game.beta`, version `0.1.0-beta.9`, versionCode 9) fixes short road coverage at four tower pads, including central Frostfall Pass. It gives Frost towers a 35% chill chance at level 1, 50% at level 2 and 85% at level 3, while preferring unchilled mobs. It includes visible castle and tower health, paid tower repairs, ranged axe-throwing orcs and working fullscreen controls where supported. Other features include purchase confirmations, independently trained soldiers, five distinct roads with approved pixelated photographic terrain, the compact phone interface, tower/spell guide, and contagious level 3 Frost nova. It is separate from the original Android preview and does not import that preview's saved progress. Updates from an earlier beta preserve the beta's checkpoint saves. This is a developer-run repository, **not an app in F-Droid’s official catalog**. Anyone who has the public link can access its downloads; “unlisted” does not provide privacy or access control.
 
-**Beta 8's public page, signed feed, and APK were verified live on 5 November 2026.** Download the [signed beta 8 APK](https://sivivatu.github.io/wilderguard-beta/fdroid/repo/com.wilderguard.game.beta_8.apk) directly to update now. For F-Droid installation:
+**Beta 9's public page, signed feed, and APK were verified live on 6 November 2026.** Download the [signed beta 9 APK](https://sivivatu.github.io/wilderguard-beta/fdroid/repo/com.wilderguard.game.beta_9.apk) directly to update now. For F-Droid installation:
 
 1. [Install F-Droid](https://f-droid.org/F-Droid.apk) if it isn’t already on the device.
 2. Open the [Wilderguard Beta install page](https://sivivatu.github.io/wilderguard-beta/) on the tablet and tap **Add beta to F-Droid**. Confirm adding the repository in F-Droid.
@@ -18,11 +18,11 @@ Wilderguard Beta (`com.wilderguard.game.beta`, version `0.1.0-beta.8`, versionCo
 
 The install page includes the signing details. The app targets Android API 34, supports API 22 and newer with a modern WebView, and opens in landscape. Physical Tab S4 testing is pending. See [F-Droid beta notes](fdroid/README.md) for publisher and repository details.
 
-The live feed recommends beta 8. Refresh the repository in F-Droid to update. All eight signed APKs are retained; betas 1–7 remain unchanged and use the same permanent signing identity.
+The live feed recommends beta 9. Refresh the repository in F-Droid to update. All nine signed APKs are retained; betas 1–8 remain unchanged and use the same permanent signing identity.
 
 ## Play
 
-The accepted terrain style B remains bundled offline. The beta 7 source tag is preserved as the working reference before the level-scaled Frost chances.
+The accepted terrain style B remains bundled offline. The beta 8 source tag is preserved as the working reference before the tower reach fix.
 
 Pick a tower, tap a marked place on the map, confirm its diamond cost, and start the wave when you’re ready. Tower upgrades also ask for confirmation; canceling spends nothing and closing a dialog restores your previous pause state. Archer towers fire quickly for 15 damage every 0.7 seconds at range 185. Cannons deal 35 damage every 1.65 seconds at range 170, and splash nearby enemies. Frost towers deal 8 damage every 0.8 seconds at range 165, with a 35% chance per hit at level 1, 50% at level 2 and 85% at level 3 to slow a target by 50% for 2 seconds (65% / 50% / 15% failure). They prefer enemies in range that are not already chilled, checking before every shot so new arrivals take priority over chilled mobs. If all targets are chilled, they keep attacking. Damage always lands; failed chills do not refresh existing slow or level 3 nova marks. Tap a built tower to see its level-specific damage, firing interval, range and upgrades, or open **Tower & spell guide** for all the details. Upgrades increase damage, range and speed; sell a tower for 60% of what you spent.
 
@@ -32,7 +32,7 @@ Level 3 Frost towers unlock **Frost nova**: if a mob dies while its level 3 Fros
 
 Tap a built tower and choose **Soldiers** to send a two-soldier squad during a wave for 30 diamonds, once per tower per wave. Soldiers march out, block orcs and fight. Each survivor refunds 15 diamonds when the wave is cleared; fallen soldiers refund nothing. Train future squads separately from towers: level 1 has 50 health and 10 damage, level 2 has 80 health and 16 damage, and level 3 has 120 health and 24 damage. Soldiers attack every 0.8 seconds. Training upgrades cost 35 then 70 diamonds and carry between regions.
 
-Each region has a different road, shared by the renderer and combat rules. The battlefield status and wave counter use larger text while keeping the compact phone layout.
+Each region has a different road, shared by the renderer and combat rules. Every build pad gives all three level 1 tower types enough continuous road coverage for at least two hits on a fast wave-5 mob, even starting on cooldown and without a successful Frost slow. Roads near four pads in Sunstone, Frostfall and Hollow Crown were adjusted to meet this check, including the central Frostfall tower. The battlefield status and wave counter use larger text while keeping the compact phone layout.
 
 The **Castle current/20** meter and bar above the castle show its remaining health. Escaping orcs cause a brief hit outline, floating damage and a message naming the damaged structure. Towers also have health bars and exact HP in their details. Archer towers start at 180 HP, Cannon at 220 and Frost at 170; upgrades add 80 HP to the maximum and remaining health, preserving existing damage. Tap a damaged tower for a confirmed diamond repair. Damage carries between waves, and Mending Light heals the castle rather than towers.
 
@@ -98,6 +98,6 @@ See [NOTES.md](NOTES.md) for Eric’s original idea and the work still needed be
 
 The following records the setup before the owner authorized public publication. See [the publication workflow](docs/publication.md) for the current repository and release locations.
 
-The complete project is tracked in a local Git repository on `main`, with source checkpoints tagged `v0.1.0-beta.2` through `v0.1.0-beta.8`. The source repository has no remote and has not been pushed. Android install material is published separately through the existing F-Droid distribution repository.
+The complete project is tracked in a local Git repository on `main`, with source checkpoints tagged `v0.1.0-beta.2` through `v0.1.0-beta.9`. The source repository has no remote and has not been pushed. Android install material is published separately through the existing F-Droid distribution repository.
 
 Source code, Android build files, tests, documentation, fonts, and the generated artwork concepts are included. Dependencies, generated builds, APKs, reference archives, local configuration, and signing material are ignored. Existing local artifacts remain in `artifacts/`, including the separate F-Droid distribution checkout. Signing-key custody and recovery are documented in the beta publishing runbook; keys are not part of this repository.
