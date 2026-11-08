@@ -1,10 +1,11 @@
 import { describe, expect, it, vi } from 'vitest';
 import { createTelemetryOutbox, MAX_EVENTS, RETENTION_MS } from '../src/telemetry-outbox';
 import { startEvent } from './telemetry-fixture';
+import type { TelemetryEvent } from '../src/telemetry-contract';
 function fixture() {
   const data = new Map<string, string>();
   const storage = { getItem: (k: string) => data.get(k) ?? null, setItem: (k: string, v: string) => { data.set(k, v); } };
-  let now = startEvent.at; const send = vi.fn(async () => 'sent' as const);
+  let now = startEvent.at; const send = vi.fn(async (_event: TelemetryEvent, _signal: AbortSignal) => 'sent' as const);
   const make = (scope = 'project-a') => createTelemetryOutbox({ storage, scope, now: () => now, send });
   return { data, storage, send, make, advance: (ms: number) => { now += ms; } };
 }
@@ -14,7 +15,7 @@ describe('bounded isolated outbox', () => {
     f.send.mockRejectedValueOnce(new Error('offline'));
     await q.flush(); expect(q.size()).toBe(1);
     const resumed = f.make(); await resumed.flush(); expect(resumed.size()).toBe(0);
-    expect(f.send.mock.calls[0]).toEqual(f.send.mock.calls[1]);
+    expect(f.send.mock.calls[0][0]).toEqual(f.send.mock.calls[1][0]);
     resumed.record(startEvent); f.advance(RETENTION_MS + 1); await resumed.flush(); expect(f.send).toHaveBeenCalledTimes(2);
   });
   it('drops oldest on overflow and purges after project/provider change', () => {

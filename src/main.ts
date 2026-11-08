@@ -1,3 +1,6 @@
+import { App } from '@capacitor/app';
+import { gameplayTelemetry, telemetry, telemetrySettings } from './telemetry';
+import type { ProviderChoice } from './telemetry-contract';
 import { Capacitor } from '@capacitor/core';
 import { createIcons, Shield, Gem, Heart, ChevronRight, ChevronDown, ArrowRight, Map, Swords, BookOpen, Settings, Volume2, VolumeX, Play, Pause, FastForward, Flag, LockKeyhole, Check, Sparkles, Snowflake, Flame, Plus, X, Leaf, Target, Crosshair, RotateCcw, CircleHelp, Maximize, Trophy, ArrowUp, Trash2, Mountain, TreePine, Castle, Sun, Crown } from 'lucide';
 import { advanceRegion, buildTower, createGame, MAX_TOWER_LEVEL, REGIONS, repairCost, repairTower, sellTower, SLOTS, startWave, tickGame, TOWER_TYPES, upgradeCost, upgradeTower, useSpell, type GameState, type Spell, type TowerType } from './game';
@@ -16,7 +19,10 @@ if (isInstalled()) document.documentElement.classList.add('battle-focus');
 const icons = { Shield, Gem, Heart, ChevronRight, ChevronDown, ArrowRight, Map, Swords, BookOpen, Settings, Volume2, VolumeX, Play, Pause, FastForward, Flag, LockKeyhole, Check, Sparkles, Snowflake, Flame, Plus, X, Leaf, Target, Crosshair, RotateCcw, CircleHelp, Maximize, Trophy, ArrowUp, Trash2, Mountain, TreePine, Castle, Sun, Crown };
 const icon = (name: string, cls = '') => `<i data-lucide="${name}" class="${cls}" aria-hidden="true"></i>`;
 const refreshIcons = () => createIcons({ icons, attrs: { 'stroke-width': 1.7 } });
-let state: GameState = loadGame() || createGame();
+const restoredGame = loadGame();
+let state: GameState = restoredGame || createGame();
+if (restoredGame) gameplayTelemetry.restore();
+function observed(next: GameState): GameState { gameplayTelemetry.transition(state, next); return next; }
 let selectedType: TowerType = 'archer';
 let selectedSlot: number | null = null;
 let paused = false;
@@ -100,6 +106,7 @@ function persist() {
   if (!saveGame(state) && !storageWarningShown) { storageWarningShown = true; get('save-status').textContent = 'Storage unavailable · progress stays in this session'; toast('Progress cannot be saved on this browser. Keep this session open.'); }
 }
 function updateUI() {
+  gameplayTelemetry.setPaused(paused || document.hidden);
   get('diamond-count').textContent = state.diamonds.toLocaleString();
   get('battle-diamond-count').textContent = state.diamonds.toLocaleString();
   get('lives-count').textContent = String(state.lives);
@@ -173,14 +180,14 @@ function updateResult() {
 }
 function nextRegion() {
   if (state.regionIndex === REGIONS.length - 1) { showDialog('completed'); return; }
-  state = advanceRegion(state); selectedSlot = null; paused = false; persist(); updateUI(); toast(`Welcome to ${REGIONS[state.regionIndex].name}. Build a new line of defense.`);
+  state = observed(advanceRegion(state)); selectedSlot = null; paused = false; persist(); updateUI(); toast(`Welcome to ${REGIONS[state.regionIndex].name}. Build a new line of defense.`);
 }
 function launchWave() {
   if (renderer.artworkStatus !== 'ready') return;
   if (paused) { toast('Resume your adventure before starting the next wave.'); return; }
   if (state.phase === 'victory') { nextRegion(); return; }
   if (!state.towers.length) { toast('Give your kingdom a chance! Tap a + spot to build your first tower.'); return; }
-  persist(); state = startWave(state); selectedSlot = null; updateUI();
+  persist(); state = observed(startWave(state)); selectedSlot = null; updateUI();
 }
 canvas.addEventListener('click', event => {
   if (paused || ['defeat', 'victory'].includes(state.phase)) return;
@@ -202,14 +209,14 @@ setupFullscreen(get<HTMLButtonElement>('fullscreen'), { native: Capacitor.isNati
 app.addEventListener('click', event => {
   const button = (event.target as HTMLElement).closest<HTMLButtonElement>('button'); if (!button) return;
   if (button.dataset.tower) { selectedType = button.dataset.tower as TowerType; selectedSlot = null; updateUI(); }
-  if (button.dataset.spell) { const spell = button.dataset.spell as Spell; const next = useSpell(state, spell); if (next !== state) { state = next; playSound('spell'); toast(spell === 'heal' ? `Castle restored to ${state.lives}/20 health. Towers need their own repairs.` : `${SPELL_NAMES[spell]} cast!`); updateUI(); } }
+  if (button.dataset.spell) { const spell = button.dataset.spell as Spell; const next = useSpell(state, spell); if (next !== state) { state = observed(next); playSound('spell'); toast(spell === 'heal' ? `Castle restored to ${state.lives}/20 health. Towers need their own repairs.` : `${SPELL_NAMES[spell]} cast!`); updateUI(); } }
   if (button.dataset.region) { const index = Number(button.dataset.region); toast(index === state.regionIndex ? `You’re defending ${REGIONS[index].name}.` : index < state.regionIndex ? 'This region is safe. Keep going — the kingdom needs you!' : `Free ${REGIONS[index - 1].name} to unlock this region.`); }
   if (button.dataset.dialog) showDialog(button.dataset.dialog);
   const action = button.dataset.action;
   if (action === 'advance') nextRegion();
-  if (action === 'retry') { state = { ...checkpoint, towers: checkpoint.towers.map(t => ({ ...t, cooldown: 0 })) }; paused = false; selectedSlot = null; updateUI(); }
+  if (action === 'retry') { gameplayTelemetry.retry(); state = { ...checkpoint, towers: checkpoint.towers.map(t => ({ ...t, cooldown: 0 })) }; paused = false; selectedSlot = null; updateUI(); }
   if (action === 'new-campaign') showDialog('restart');
-  if (action === 'restart-confirm') { state = createGame(); checkpoint = state; selectedSlot = null; paused = false; wasPausedBeforeDialog = false; persist(); get<HTMLDialogElement>('game-dialog').close(); updateUI(); }
+  if (action === 'restart-confirm') { gameplayTelemetry.abandon(state); gameplayTelemetry.reset(); state = createGame(); checkpoint = state; selectedSlot = null; paused = false; wasPausedBeforeDialog = false; persist(); get<HTMLDialogElement>('game-dialog').close(); updateUI(); }
   if (action === 'deselect') { selectedSlot = null; updateUI(); }
   if (action === 'confirm-purchase') confirmPurchase();
   if (action === 'cancel-purchase') {
@@ -231,7 +238,7 @@ app.addEventListener('click', event => {
         apply: current => repairTower(current, tower.id) });
     } else {
       const next = sellTower(state, tower.id);
-      if (next !== state) { state = next; selectedSlot = null; playSound('build'); persist(); updateUI(); }
+      if (next !== state) { state = observed(next); selectedSlot = null; playSound('build'); persist(); updateUI(); }
     }
   }
 });
@@ -251,7 +258,7 @@ function confirmPurchase() {
   pendingPurchase = null;
   const next = state.diamonds >= purchase.cost ? purchase.apply(state) : state;
   if (next === state) toast('This purchase is no longer available. No diamonds spent.');
-  else { state = next; playSound('build'); persist(); }
+  else { state = observed(next); playSound('build'); persist(); }
   if (purchase.returnToSoldiers) showDialog('soldiers'); else dialog.close();
   updateUI();
 }
@@ -277,7 +284,7 @@ function showDialog(type: string) {
     if (!tower) { dialog.close(); return; }
     content.innerHTML = soldierGuide(state, tower.id);
   }
-  else if (type === 'settings') content.innerHTML = `<span class="dialog-badge">${icon('settings')}</span><span class="eyebrow">MAKE YOURSELF AT HOME</span><h2>Camp settings</h2><p>Your progress saves between waves on this device.</p>${reportingSettings()}<button class="setting-row" id="toggle-sound">${icon(soundEnabled ? 'volume-2' : 'volume-x')}<span>Gentle game sounds</span><strong>${soundEnabled ? 'On' : 'Off'}</strong></button><button class="setting-row" data-dialog="guide">${icon('book-open')}<span>How to play</span>${icon('chevron-right')}</button><button class="setting-row" data-dialog="defenses">${icon('swords')}<span>Tower and ability details</span>${icon('chevron-right')}</button><button class="setting-row" data-dialog="campaign">${icon('map')}<span>Campaign map</span>${icon('chevron-right')}</button><button class="setting-row" data-action="new-campaign">${icon('rotate-ccw')}<span>Start a new adventure</span>${icon('chevron-right')}</button><div class="creator-note">Made by <strong>Eric, a 7-year-old boy.</strong><br>A big adventure from a little imagination.</div>`;
+  else if (type === 'settings') content.innerHTML = `<span class="dialog-badge">${icon('settings')}</span><span class="eyebrow">MAKE YOURSELF AT HOME</span><h2>Camp settings</h2><p>Your progress saves between waves on this device.</p>${reportingSettings()}${telemetrySettings()}<button class="setting-row" id="toggle-sound">${icon(soundEnabled ? 'volume-2' : 'volume-x')}<span>Gentle game sounds</span><strong>${soundEnabled ? 'On' : 'Off'}</strong></button><button class="setting-row" data-dialog="guide">${icon('book-open')}<span>How to play</span>${icon('chevron-right')}</button><button class="setting-row" data-dialog="defenses">${icon('swords')}<span>Tower and ability details</span>${icon('chevron-right')}</button><button class="setting-row" data-dialog="campaign">${icon('map')}<span>Campaign map</span>${icon('chevron-right')}</button><button class="setting-row" data-action="new-campaign">${icon('rotate-ccw')}<span>Start a new adventure</span>${icon('chevron-right')}</button><div class="creator-note">Made by <strong>Eric, a 7-year-old boy.</strong><br>A big adventure from a little imagination.</div>`;
   else if (type === 'restart') content.innerHTML = `<span class="dialog-badge">${icon('rotate-ccw')}</span><h2>A fresh adventure?</h2><p>This replaces the campaign saved on this device and returns you to the Greenfields with 120 diamonds.</p><button class="primary-button" data-action="restart-confirm">Start from the beginning ${icon('arrow-right')}</button>`;
   else if (type === 'defenses') content.innerHTML = defenseGuide(state.regionIndex);
   else if (type === 'campaign' || type === 'completed') content.innerHTML = `<span class="dialog-badge">${icon('map')}</span><span class="eyebrow">EVERY PLACE IS WORTH PROTECTING</span><h2>The road through Elderglen</h2><p>Five regions. Five waves each. Clear a region to journey onward with your diamonds and spells. Each new place needs a fresh set of towers.</p>${REGIONS.map((region, index) => `<div class="guide-row"><span class="guide-symbol">${icon(regionIcons[index])}</span><div><strong>${index + 1}. ${region.name}</strong><p>${region.difficulty} · ${index < state.regionIndex || index === state.regionIndex && state.phase === 'victory' ? 'Liberated' : index === state.regionIndex ? 'Your current stand' : 'Waiting to be freed'}</p></div></div>`).join('')}`;
@@ -291,6 +298,11 @@ function showDialog(type: string) {
       if (dialog.open && reportingToggle.isConnected) showDialog('settings');
     });
   });
+  get('gameplay-provider')?.addEventListener('change', event => {
+    const value = (event.target as HTMLSelectElement).value;
+    if (['off', 'posthog', 'gameanalytics'].includes(value)) telemetry.setChoice(value as ProviderChoice);
+    showDialog('settings');
+  });
   get('toggle-sound')?.addEventListener('click', () => { soundEnabled = !soundEnabled; if (soundEnabled) playSound('build'); showDialog('settings'); });
 }
 get('settings').addEventListener('click', () => showDialog('settings'));
@@ -299,6 +311,12 @@ dialog.querySelector('.dialog-close')!.addEventListener('click', () => dialog.cl
 dialog.addEventListener('click', event => { if (event.target === dialog) { const r = dialog.getBoundingClientRect(); if (event.clientX < r.left || event.clientX > r.right || event.clientY < r.top || event.clientY > r.bottom) dialog.close(); } });
 dialog.addEventListener('close', () => { pendingPurchase = null; paused = wasPausedBeforeDialog; updateUI(); });
 document.addEventListener('visibilitychange', () => { if (document.hidden && state.phase === 'wave') setPaused(true); });
+if (Capacitor.isNativePlatform()) {
+  void App.addListener('appStateChange', ({ isActive }) => {
+    if (!isActive && state.phase === 'wave') setPaused(true);
+    if (isActive) void telemetry.flush();
+  }).catch(() => { gameplayTelemetry.setPaused(true); });
+}
 document.addEventListener('keydown', event => {
   if (dialog.open || (event.target as HTMLElement).tagName === 'BUTTON') return;
   if (event.code === 'Space') { event.preventDefault(); if (state.phase === 'wave') setPaused(!paused); else launchWave(); }
@@ -307,18 +325,23 @@ document.addEventListener('keydown', event => {
 let lastTime = 0;
 let lastUiUpdate = 0;
 function frame(timestamp: number) {
-  const dt = Math.min((timestamp - lastTime) / 1000 || 0, .1); lastTime = timestamp;
+  const interval = timestamp - lastTime;
+  const dt = Math.min(interval / 1000 || 0, .1); lastTime = timestamp;
+  const sample = gameplayTelemetry.shouldSample();
+  const updateStart = sample ? performance.now() : 0;
   if (!paused && state.phase === 'wave') {
     const previousPhase = state.phase;
-    for (let step = 0; step < speed; step += 1) state = tickGame(state, dt);
+    for (let step = 0; step < speed; step += 1) state = observed(tickGame(state, dt));
     if (state.phase !== previousPhase) { persist(); playSound(state.phase === 'defeat' ? 'build' : 'win'); updateUI(); }
     else if (timestamp - lastUiUpdate > 500) { updateUI(); lastUiUpdate = timestamp; }
   }
   else if (!paused && (state.frostBursts.length || state.damageEvents.length)) {
-    state = tickGame(state, dt);
+    state = observed(tickGame(state, dt));
     if (timestamp - lastUiUpdate > 500) { updateUI(); lastUiUpdate = timestamp; }
   }
+  const renderStart = sample ? performance.now() : 0;
   renderer.draw(state, selectedSlot, selectedType, timestamp / 1000);
+  gameplayTelemetry.frame(interval, sample ? renderStart - updateStart : undefined, sample ? performance.now() - renderStart : undefined);
   requestAnimationFrame(frame);
 }
 void renderer.ready.then(() => updateUI()).catch(() => {

@@ -6,7 +6,7 @@ Family beta testers can choose Off, PostHog or GameAnalytics in Camp settings. S
 
 ## Architecture and system design
 
-One versioned strict event contract feeds one collector at UI state transitions. `game.ts` stays pure. Provider adapters receive only validated snapshots; no SDK auto collection. An outbox stores at most 64 events for 48 hours separately from saves; oldest events expire/drop first. Transport runs asynchronously, retries with stable IDs and timestamps, and never waits in the render loop. Collection is opt-in, beta-only, and unavailable without valid configuration. Changing provider or project purges the old outbox. Storage failure disables delivery.
+One versioned strict event contract feeds one collector at UI state transitions. `game.ts` stays pure. Provider adapters receive only validated snapshots; no SDK auto collection. An outbox stores at most 64 events for 48 hours separately from saves; oldest events expire/drop first. Transport runs asynchronously, retries with stable IDs and timestamps, and never waits in the render loop. Collection is opt-in, beta-only, and unavailable without valid configuration. Changing provider or project purges the old outbox. Storage failure disables delivery. Quota failures remove old preferences/outbox as a fallback; if writes and removals are both blocked, Off applies to this session and settings explicitly require clearing app data before restart/share.
 
 PostHog uses the documented public capture API, anonymous run IDs, no person profiles and GeoIP disabled. GameAnalytics uses a private relay to keep its HMAC game secret out of bundles. The relay is source only; deployment requires separate authorization. No accounts are configured in this implementation.
 
@@ -14,7 +14,7 @@ PostHog uses the documented public capture API, anonymous run IDs, no person pro
 
 - `wave_start` starts the denominator; `wave_end` records clear, defeat or explicit campaign abandon once. Missing terminal events remain unknown/interrupted; checkpoint restores do not infer failure.
 - Run IDs reset at launch, campaign restart, and provider selection. Attempts have new IDs. Retry and checkpoint context are explicit. Never interpret run IDs as people.
-- Terminal facts include actual cumulative health loss (including later healing), opening/remaining diamonds, observed earned/spent deltas during a wave, separate preparation spend, tower type/level counts, and sampled frame/update/render durations. Active duration uses wall time excluding pauses/dialogs/background, independent of game speed.
+- Terminal facts include actual cumulative health loss (including later healing), opening/remaining diamonds, observed earned/spent deltas during a wave, separate preparation spend, tower type/level counts, and sampled frame/update/render durations. Active duration estimates wall time at animation-frame resolution, excluding the first and terminal intervals and pauses/dialogs/background, independent of game speed. Frame timings sample every 30 active frames; slow-frame counts describe samples, not all frames.
 - No saves, names, contact data, location, exact touch history, screenshots, replay, persistent player IDs, hardware fingerprint or full state are transmitted.
 - Queue delivery is best effort. An app kill can lose a live attempt or pending storage write. A lost acknowledgement can cause a duplicate. Opt-out cannot recall sent requests or data already accepted by a provider.
 

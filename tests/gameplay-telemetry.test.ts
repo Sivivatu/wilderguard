@@ -2,10 +2,11 @@ import { describe, expect, it } from 'vitest';
 import { buildTower, createGame, startWave, useSpell } from '../src/game';
 import { createGameplayCollector } from '../src/gameplay-telemetry';
 import type { TelemetryEvent } from '../src/telemetry-contract';
-function fixture(enabled = true) {
+function fixture(initialEnabled = true) {
+  let enabled = initialEnabled;
   const events: TelemetryEvent[] = [];
   const collector = createGameplayCollector({ build: 'beta-test', enabled: () => enabled, emit: e => events.push(e) });
-  return { collector, events };
+  return { collector, events, setEnabled: (value: boolean) => { enabled = value; } };
 }
 describe('wave attempts', () => {
   it('captures a clear once with real economic deltas, healing and composition', () => {
@@ -38,7 +39,7 @@ describe('wave attempts', () => {
     c.reset(); c.transition(wave, { ...wave, phase: 'reward' }); expect(events).toHaveLength(4);
   });
   it('collects nothing while disabled and never starts an attempt halfway through a wave', () => {
-    const { collector: c, events } = fixture(false); const ready = createGame(); const wave = startWave(ready);
-    c.transition(ready, wave); c.frame(20, 1, 1); c.abandon(wave); expect(events).toEqual([]);
+    const { collector: c, events, setEnabled } = fixture(false); const ready = createGame(); const wave = startWave(ready);
+    c.transition(ready, wave); setEnabled(true); c.frame(20, 1, 1); c.transition(wave, { ...wave, phase: 'reward' }); c.abandon(wave); expect(events).toEqual([]);
   });
 });
