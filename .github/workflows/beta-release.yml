@@ -19,6 +19,9 @@ env:
   VITE_GAMEPLAY_CHANNEL: ''
   VITE_GAMEPLAY_BUILD: ''
   VITE_POSTHOG_TOKEN: ''
+  VITE_POSTHOG_HOST: ''
+  VITE_POSTHOG_EPOCH: ''
+  VITE_POSTHOG_IP_DISCARD_CONFIRMED: ''
   VITE_GAMEANALYTICS_RELAY: ''
   VITE_SENTRY_DSN: ''
   VITE_SENTRY_ENVIRONMENT: ''
@@ -54,6 +57,7 @@ jobs:
       - run: npm run test:release
       - run: npx playwright install --with-deps chromium
       - run: npm run test:reporting
+      - run: npm run test:telemetry
       - name: Install Android build tools
         run: |
           "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" 'platforms;android-34' 'build-tools;34.0.0'

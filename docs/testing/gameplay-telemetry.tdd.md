@@ -31,3 +31,11 @@ Browser result: full gameplay run passed 32 existing tests; new telemetry test i
 
 - Baseline run 42493022068 failed before project tests because `sdkmanager` was not on `PATH` on the Ubuntu 24.04 runner. The runner image exposes the Android SDK under `ANDROID_HOME`; both beta and publisher build steps now call the pinned SDK command-line tools path via `"$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"`.
 - Local evidence: `ANDROID_HOME=/home/ubuntu/Android/Sdk /home/ubuntu/Android/Sdk/cmdline-tools/latest/bin/sdkmanager --version` completed successfully and reported 1.0.16261425. `npm run test:release` passed (37 tests). No release step was run.
+
+## PostHog layer
+
+- RED checkpoint `7ac308f` (original `a6bc3c0`, rebased while unpublished to inherit foundation CI path fix): missing adapter module and ignored native `allowed()` gate fail focused tests.
+- GREEN: `npm run test:coverage`: 380 tests pass; 99.52% lines, 94.19% branches, 95.95% functions, 96.89% statements. Adapter tests assert exact anonymous payload, stable UUID/time, EU-only config, explicit IP-discard confirmation, extra-field rejection, abort propagation and HTTP retry/drop behavior.
+- Native runtime tests cover pending identity, `.beta` success, public package denial, and failed bridge lookup. `npm run build`, Capacitor sync and unsigned `assembleBeta testBetaUnitTest` pass on JDK 17/SDK 34.
+- General/security review: no critical/high findings. Live account IP discard, zero-spend limits and ingestion are unverified. Non-native beta bundles rely on the explicit build channel; never publish configured beta fixtures as public builds.
+- `node scripts/build-telemetry-fixture.mjs && playwright test --config playwright.telemetry.config.ts`: 2/2 browser tests pass with real timers. All requests intercepted with synthetic config. Tests verify no capture before selection, real start/terminal summaries, pause exclusion, save/reload, same IDs across offline/restart/reconnect, and Off purge. Virtual-clock test timing was replaced after exposing modal/timer hangs; no gameplay change was needed.
