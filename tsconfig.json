@@ -4,5 +4,5 @@
     "moduleResolution": "Bundler", "strict": true, "skipLibCheck": true,
     "noEmit": true, "allowImportingTsExtensions": true, "isolatedModules": true
   },
-  "include": ["src", "tests", "*.ts"]
+  "include": ["src", "tests", "*.ts", "server", "scripts/run-gameanalytics-relay.ts"]
 }

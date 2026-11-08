@@ -81,3 +81,67 @@ describe('server-only authenticated bounded relay', () => {
     const limited = fixture({ maxEventsPerRun: 2 }); await limited.relay(request()); expect((await limited.relay(request(end))).status).toBe(422);
   });
 });
+
+it('reserves quota for potentially partial upstream ingestion before acknowledging a rejected batch', async () => {
+  const f = fixture({ maxEventsPerRun: 2 });
+  f.fetcher.mockResolvedValueOnce(new Response('{"enabled":true,"server_ts":1794096000}')).mockResolvedValueOnce(new Response('partial ingestion', { status: 400 }));
+  expect((await f.relay(request())).status).toBe(422);
+  expect((await f.relay(request({ ...startEvent, id: '30000000-0000-4000-8000-000000000001' }))).status).toBe(422);
+  expect(f.fetcher).toHaveBeenCalledTimes(2);
+});
+
+it('enforces CORS/method/content/clock/rate boundaries and serializes in-flight requests', async () => {
+  const f = fixture();
+  const options = await f.relay(new Request('https://private.example.test/telemetry', { method: 'OPTIONS', headers: { Origin: 'https://localhost' } }));
+  expect(options.status).toBe(200); expect(options.headers.get('access-control-allow-origin')).toBe('https://localhost');
+  expect((await f.relay(new Request('https://private.example.test/telemetry', { headers: { Origin: 'https://localhost' } }))).status).toBe(405);
+  expect((await f.relay(new Request('https://private.example.test/other', { headers: { Origin: 'https://localhost' } }))).status).toBe(404);
+  expect((await f.relay(new Request('https://private.example.test/telemetry', { method: 'POST', headers: { Origin: 'https://localhost', 'X-Telemetry-Epoch': 'family-1' }, body: 'invalid' }))).status).toBe(415);
+  expect((await f.relay(request({ ...startEvent, at: startEvent.at + 120000 }))).status).toBe(422);
+  let resolve!: (r: Response) => void;
+  f.fetcher.mockImplementationOnce(() => new Promise(r => { resolve = r; }));
+  const sending = f.relay(request());
+  await vi.waitFor(() => expect(f.fetcher).toHaveBeenCalledTimes(1));
+  expect((await f.relay(request())).status).toBe(503);
+  resolve(new Response('{"enabled":true,"server_ts":1794096000}')); expect((await sending).status).toBe(200);
+  for (let i = 0; i < 121; i++) await f.relay(request());
+  expect((await f.relay(request())).status).toBe(429);
+  f.advance(60001); expect((await f.relay(request())).status).toBe(200);
+});
+
+it('fails closed on invalid relay configuration and upstream init/events errors', async () => {
+  expect(() => createGameAnalyticsRelay({ ...config, origins: ['*'] })).toThrow();
+  expect(() => createGameAnalyticsRelay({ ...config, origins: ['https://localhost/path'] })).toThrow();
+  expect(() => createGameAnalyticsRelay(config, { maxEventsPerRun: 481 })).toThrow();
+  for (const status of [400, 429, 500]) {
+    const init = fixture(); init.fetcher.mockResolvedValueOnce(new Response('{}', { status }));
+    expect((await init.relay(request())).status).toBe(status === 400 ? 422 : 503);
+    const events = fixture(); events.fetcher.mockResolvedValueOnce(new Response('{"enabled":true,"server_ts":1794096000}')).mockResolvedValueOnce(new Response('{}', { status }));
+    expect((await events.relay(request())).status).toBe(status === 400 ? 422 : 503);
+  }
+  const bad = fixture(); bad.fetcher.mockResolvedValueOnce(new Response('{}')); expect((await bad.relay(request())).status).toBe(422);
+  expect(mapGameAnalyticsEvent({ ...end, earned: 0, spent: 0, preparationSpent: 0 }, false).filter(row => row.category === 'resource')).toEqual([]);
+});
+
+it('reuses the same logical event reservation through transient upstream failures', async () => {
+  const f = fixture({ maxEventsPerRun: 2 }); let failures = 4;
+  f.fetcher.mockImplementation(async url => {
+    if (String(url).endsWith('/init')) return new Response('{"enabled":true,"server_ts":1794096000}');
+    if (failures-- > 0) return new Response('{}', { status: 503 });
+    return new Response('{}');
+  });
+  for (let i = 0; i < 4; i++) expect((await f.relay(request())).status).toBe(503);
+  expect((await f.relay(request())).status).toBe(200);
+  expect((await f.relay(request())).status).toBe(200);
+  expect(f.fetcher.mock.calls.filter(([url]) => String(url).endsWith('/events'))).toHaveLength(5);
+});
+
+it('keeps an event retryable when conservative daily network quota is temporarily exhausted', async () => {
+  const f = fixture({ maxEventsPerRun: 2 });
+  f.fetcher.mockImplementation(async url => String(url).endsWith('/init')
+    ? new Response('{"enabled":true,"server_ts":1794096000}') : new Response('{}', { status: 503 }));
+  for (let i = 0; i < 1000; i++) { expect((await f.relay(request())).status).toBe(503); f.advance(1000); }
+  expect((await f.relay(request())).status).toBe(429);
+  f.advance(24 * 60 * 60 * 1000);
+  expect((await f.relay(request())).status).toBe(503);
+}, 10000);
