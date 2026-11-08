@@ -26,3 +26,8 @@ Plan: [gameplay-telemetry.md](../gameplay-telemetry.md). Journeys: consent befor
 General and security reviews found the revocation issue; fixed before GREEN completion. Cloud projects are unconfigured. Tests/builds do not establish real provider ingestion, native first-launch offline behavior, force-stop durability, or live project privacy settings.
 
 Browser result: full gameplay run passed 32 existing tests; new telemetry test initially failed because Playwright's `toBeDisabled` matcher does not apply to `<option>`. Checking the actual `disabled` DOM property fixed it; focused telemetry rerun passed 1/1. Both options had correctly been disabled throughout. All 33 browser journeys are verified across those runs.
+
+## Inherited CI runner fix
+
+- Baseline run 42493022068 failed before project tests because `sdkmanager` was not on `PATH` on the Ubuntu 24.04 runner. The runner image exposes the Android SDK under `ANDROID_HOME`; both beta and publisher build steps now call the pinned SDK command-line tools path via `"$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"`.
+- Local evidence: `ANDROID_HOME=/home/ubuntu/Android/Sdk /home/ubuntu/Android/Sdk/cmdline-tools/latest/bin/sdkmanager --version` completed successfully and reported 1.0.16261425. `npm run test:release` passed (37 tests). No release step was run.
