@@ -45,3 +45,13 @@ describe('durable revocation', () => {
     expect(JSON.parse(data.get('wilderguard-telemetry-outbox-v1')!).events).toEqual([]);
   });
 });
+
+describe('native release gate', () => {
+  it('cannot enable collection or send until the native beta identity is verified', async () => {
+    let allowed = false; const f = fixture();
+    const c = createTelemetryController({ build: 'beta-test', storage: f.storage, adapters: [f.posthog], allowed: () => allowed });
+    c.setChoice('posthog'); c.record({ ...startEvent, at: Date.now() }); await c.flush(); expect(c.enabled()).toBe(false);
+    expect(c.configured('posthog')).toBe(false); expect(f.posthog.send).not.toHaveBeenCalled();
+    allowed = true; c.setChoice('posthog'); c.record({ ...startEvent, at: Date.now() }); await c.flush(); expect(f.posthog.send).toHaveBeenCalledTimes(1);
+  });
+});
