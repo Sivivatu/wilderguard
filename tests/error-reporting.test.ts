@@ -106,7 +106,7 @@ it('keeps the durable off preference if purge fails before re-enabling', async (
   expect(f.client.start).not.toHaveBeenCalled();
   expect(f.controller.status()).toBe('unavailable');
   await f.controller.setEnabled(true);
-  expect(f.prepare).toHaveBeenCalledTimes(2);
+  expect(f.prepare).toHaveBeenCalledTimes(3);
   expect(f.client.start).toHaveBeenCalledOnce();
 });
 it('waits for SDK shutdown before preparing a new enabled instance', async () => {
@@ -122,4 +122,48 @@ it('waits for SDK shutdown before preparing a new enabled instance', async () =>
   finishStop(); await Promise.all([off, on]);
   expect(f.client.start).toHaveBeenCalledTimes(2);
   expect(f.controller.status()).toBe('on');
+});
+
+it('purges queued reports on opt-out while the SDK is still loading', async () => {
+  const f = fixture('on');
+  let finishLoad!: (client: typeof f.client) => void;
+  f.load.mockImplementation(() => new Promise(resolve => { finishLoad = resolve; }));
+  const loading = f.controller.start();
+  await f.controller.setEnabled(false);
+  expect(f.prepare).toHaveBeenCalledOnce();
+  expect(f.storage.setItem).toHaveBeenCalledWith('wilderguard-error-reporting-v1', 'off');
+  expect(f.controller.status()).toBe('off');
+  finishLoad(f.client);
+  await loading;
+  expect(f.client.start).not.toHaveBeenCalled();
+});
+
+it('purges queued reports on opt-out after the SDK fails to load', async () => {
+  const f = fixture('on');
+  f.load.mockRejectedValueOnce(new Error('SDK unavailable'));
+  await f.controller.start();
+  await f.controller.setEnabled(false);
+  expect(f.prepare).toHaveBeenCalledOnce();
+  expect(f.controller.status()).toBe('off');
+});
+
+it('reports unavailable and keeps reports disabled when opt-out cache removal fails', async () => {
+  const f = fixture('on');
+  f.load.mockRejectedValueOnce(new Error('SDK unavailable'));
+  f.prepare.mockRejectedValueOnce(new Error('cache removal failed'));
+  await f.controller.start();
+  await f.controller.setEnabled(false);
+  expect(f.prepare).toHaveBeenCalledOnce();
+  expect(f.storage.setItem).toHaveBeenCalledWith('wilderguard-error-reporting-v1', 'off');
+  expect(f.controller.isEnabled()).toBe(false);
+  expect(f.controller.status()).toBe('unavailable');
+});
+
+it('attempts independent cache removal even if stopping the client fails', async () => {
+  const f = fixture('on');
+  await f.controller.start();
+  f.client.stop.mockRejectedValueOnce(new Error('shutdown failed'));
+  await f.controller.setEnabled(false);
+  expect(f.prepare).toHaveBeenCalledOnce();
+  expect(f.controller.status()).toBe('unavailable');
 });

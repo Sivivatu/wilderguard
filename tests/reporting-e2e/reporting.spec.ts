@@ -94,3 +94,32 @@ test('delivers an unhandled error buffered before the lazy SDK finishes loading'
   expect(envelopes[0]).toContain('ReferenceError');
   expect(envelopes[0]).not.toContain('early-private-save');
 });
+
+test('settings retries a failed opt-out without re-enabling error reporting', async ({ page }) => {
+  const envelopes: string[] = [];
+  await page.route(`https://${REPORTING_HOST}/**`, async route => {
+    envelopes.push(route.request().postData() ?? '');
+    await route.fulfill({ status: 200, body: '{}', headers: { 'access-control-allow-origin': '*' } });
+  });
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Continue playing' }).click();
+  await expect.poll(() => page.evaluate(() => performance.getEntriesByType('resource').some(entry => /sentry-client.*\.js/.test(entry.name)))).toBe(true);
+  await page.evaluate(() => { setTimeout(() => { throw new TypeError('baseline'); }, 0); });
+  await expect.poll(() => envelopes.length).toBe(1);
+  await page.evaluate(() => {
+    const original = indexedDB.open;
+    (window as unknown as { restoreIndexedDB: () => void }).restoreIndexedDB = () => { indexedDB.open = original; };
+    indexedDB.open = () => { throw new Error('temporarily unavailable'); };
+  });
+  await page.getByRole('button', { name: 'Settings', exact: true }).click();
+  await page.getByRole('button', { name: 'Automatic error reports On' }).click();
+  await expect(page.getByRole('button', { name: 'Automatic error reports Unavailable' })).toBeVisible();
+  expect(await page.evaluate(() => localStorage.getItem('wilderguard-error-reporting-v1'))).toBe('off');
+  await page.evaluate(() => (window as unknown as { restoreIndexedDB: () => void }).restoreIndexedDB());
+  await page.getByRole('button', { name: 'Automatic error reports Unavailable' }).click();
+  await expect(page.getByRole('button', { name: 'Automatic error reports Off' })).toBeVisible();
+  expect(await page.evaluate(() => localStorage.getItem('wilderguard-error-reporting-v1'))).toBe('off');
+  await page.evaluate(() => { setTimeout(() => { throw new Error('disabled report'); }, 0); });
+  await page.waitForTimeout(500);
+  expect(envelopes).toHaveLength(1);
+});

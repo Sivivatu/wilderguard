@@ -2,7 +2,7 @@ import { REPORTING_PREFERENCE_KEY, type ReportingConfig } from './error-policy';
 
 type ReportingClient = { start(config: ReportingConfig, isAllowed: () => boolean): Promise<void>; stop(): Promise<void> };
 type PreferenceStore = Pick<Storage, 'getItem' | 'setItem'>;
-export function createReportingController(config: ReportingConfig | null, storage: PreferenceStore, load: () => Promise<ReportingClient>, prepareEnable: () => Promise<void> = async () => {}) {
+export function createReportingController(config: ReportingConfig | null, storage: PreferenceStore, load: () => Promise<ReportingClient>, clearCaches: () => Promise<void> = async () => {}) {
   let preference: string | null = null;
   let hasStorage = true;
   try { preference = storage.getItem(REPORTING_PREFERENCE_KEY); } catch { hasStorage = false; }
@@ -38,14 +38,17 @@ export function createReportingController(config: ReportingConfig | null, storag
       if (enabled) {
         await stopping;
         if (attempt !== generation) return;
-        await prepareEnable();
+        await clearCaches();
       }
       if (attempt !== generation) return;
       storage.setItem(REPORTING_PREFERENCE_KEY, enabled ? 'on' : 'off');
       failed = false;
     } catch { if (attempt !== generation) return; failed = true; }
     if (!enabled || failed) {
-      stopping = stopping.then(() => client?.stop()).catch(() => { if (attempt === generation) failed = true; });
+      stopping = stopping.then(async () => {
+        // Purge independently even when the lazy client never loaded or shutdown failed.
+        try { await client?.stop(); } finally { await clearCaches(); }
+      }).catch(() => { if (attempt === generation) failed = true; });
       await stopping;
       return;
     }

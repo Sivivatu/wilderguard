@@ -4,10 +4,28 @@ import { beginStartupCapture, discardStartupCapture } from './startup-errors';
 import { clearReportingCaches } from './reporting-storage';
 
 const config = readReportingConfig(import.meta.env);
-export const reporting = createReportingController(config, {
+const controller = createReportingController(config, {
   getItem: key => localStorage.getItem(key),
   setItem: (key, value) => localStorage.setItem(key, value),
 }, () => import('./sentry-client'), clearReportingCaches);
+export const reporting = {
+  ...controller,
+  setEnabled: async (enabled: boolean) => {
+    if (!enabled) discardStartupCapture();
+    await controller.setEnabled(enabled);
+  },
+};
+
+let retryEnabled: boolean | undefined;
+let pendingToggle: Promise<void> | undefined;
+export function toggleReporting(): Promise<void> {
+  if (pendingToggle) return pendingToggle;
+  const enabled = retryEnabled ?? !reporting.isEnabled();
+  pendingToggle = reporting.setEnabled(enabled).then(() => {
+    retryEnabled = reporting.status() === 'unavailable' ? enabled : undefined;
+  }).finally(() => { pendingToggle = undefined; });
+  return pendingToggle;
+}
 
 // Startup never waits on SDK loading, storage, the bridge, or the network.
 export function startReporting(): void {
@@ -32,7 +50,7 @@ export function showReportingNotice(): void {
   try { if (localStorage.getItem(NOTICE_KEY) === config.dsn) return; } catch { return; }
   const notice = document.createElement('dialog');
   notice.setAttribute('aria-label', 'Automatic error reports');
-  notice.innerHTML = `<h2>Automatic error reports</h2>${reportingSettings()}<button class="primary-button" id="continue-from-privacy">Continue playing</button>`;
+  notice.innerHTML = `<h2>Automatic error reports</h2>${reportingSettings()}<p id="reporting-notice-status" role="status"></p><button class="primary-button" id="continue-from-privacy">Continue playing</button>`;
   document.body.append(notice);
   notice.showModal();
   const acknowledge = () => {
@@ -40,7 +58,17 @@ export function showReportingNotice(): void {
     notice.close(); notice.remove();
   };
   notice.querySelector('#continue-from-privacy')?.addEventListener('click', acknowledge);
-  notice.querySelector('#toggle-error-reporting')?.addEventListener('click', () => {
-    void reporting.setEnabled(!reporting.isEnabled()).then(acknowledge);
+  const toggle = notice.querySelector<HTMLButtonElement>('#toggle-error-reporting');
+  toggle?.addEventListener('click', () => {
+    if (toggle.disabled) return;
+    toggle.disabled = true;
+    void toggleReporting().then(() => {
+      if (reporting.status() !== 'unavailable') { acknowledge(); return; }
+      const label = toggle.querySelector('strong');
+      const status = notice.querySelector('#reporting-notice-status');
+      if (label) label.textContent = 'Unavailable';
+      if (status) status.textContent = 'Could not update error reporting. Please try again.';
+      toggle.disabled = false;
+    });
   });
 }

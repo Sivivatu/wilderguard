@@ -8,7 +8,7 @@ import { defenseGuide, towerSummary } from './defense-guide';
 import { deploySoldiers, trainSoldiers, soldierStats, trainingCost, SOLDIERS } from './soldiers';
 import { soldierGuide } from './soldier-guide';
 import './style.css';
-import { reporting, reportingSettings } from './reporting';
+import { reportingSettings, toggleReporting } from './reporting';
 
 const isInstalled = () => Capacitor.isNativePlatform() || window.matchMedia('(display-mode: standalone)').matches;
 if (isInstalled()) document.documentElement.classList.add('battle-focus');
@@ -283,8 +283,13 @@ function showDialog(type: string) {
   else if (type === 'campaign' || type === 'completed') content.innerHTML = `<span class="dialog-badge">${icon('map')}</span><span class="eyebrow">EVERY PLACE IS WORTH PROTECTING</span><h2>The road through Elderglen</h2><p>Five regions. Five waves each. Clear a region to journey onward with your diamonds and spells. Each new place needs a fresh set of towers.</p>${REGIONS.map((region, index) => `<div class="guide-row"><span class="guide-symbol">${icon(regionIcons[index])}</span><div><strong>${index + 1}. ${region.name}</strong><p>${region.difficulty} · ${index < state.regionIndex || index === state.regionIndex && state.phase === 'victory' ? 'Liberated' : index === state.regionIndex ? 'Your current stand' : 'Waiting to be freed'}</p></div></div>`).join('')}`;
   else content.innerHTML = `<span class="dialog-badge">${icon('book-open')}</span><span class="eyebrow">A SMALL GUIDE TO A BIG ADVENTURE</span><h2>Welcome, Wilderguard.</h2><p>The kingdom of Elderglen needs a little courage. Yours will do nicely.</p><div class="guide-row"><span class="guide-step">1</span><div><strong>Build your line of defense</strong><p>Select a tower, then tap a + spot on the meadow. Towers attack automatically. Tap them to upgrade.</p></div></div><div class="guide-row"><span class="guide-step">2</span><div><strong>Hold back the horde</strong><p>Start a wave when you’re ready. Orcs grow stronger each wave. Upgrade your towers and mix their strengths. The castle health meter and the bar above its roof show your remaining health. Each escaped orc costs health; an armored chieftain costs three. Lose all 20 and you’ll retry from before that wave.</p></div></div><div class="guide-row"><span class="guide-step">3</span><div><strong>Bring the wild back home</strong><p>Earn diamonds after every wave. Wave 3 gives a freeze spell; wave 5 gives Starfall. Clear 5 waves to free a region and move on.</p></div></div><div class="guide-row"><span class="guide-step">✦</span><div><strong>Save a little magic for a hard moment</strong><p>Starfall hits all visible monsters. Deep freeze slows the horde for 6 seconds. Mending light restores 6 castle health. Tower repairs cost diamonds and require confirmation.</p></div></div><div class="creator-note">Made by <strong>Eric, a 7-year-old boy.</strong><br>Best played in landscape, with a brave heart.</div>`;
   if (!dialog.open) dialog.showModal(); updateUI(); refreshIcons();
-  get('toggle-error-reporting')?.addEventListener('click', () => {
-    void reporting.setEnabled(!reporting.isEnabled()).then(() => showDialog('settings'));
+  const reportingToggle = document.querySelector<HTMLButtonElement>('#toggle-error-reporting');
+  reportingToggle?.addEventListener('click', () => {
+    if (reportingToggle.disabled) return;
+    reportingToggle.disabled = true;
+    void toggleReporting().then(() => {
+      if (dialog.open && reportingToggle.isConnected) showDialog('settings');
+    });
   });
   get('toggle-sound')?.addEventListener('click', () => { soundEnabled = !soundEnabled; if (soundEnabled) playSound('build'); showDialog('settings'); });
 }
