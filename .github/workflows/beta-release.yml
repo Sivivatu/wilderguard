@@ -49,11 +49,11 @@ jobs:
       - run: npm run test:coverage
       - run: npm run test:release
       - run: npx playwright install --with-deps chromium
-      - run: npm run test:e2e -- --workers=1
       - run: npm run test:reporting
       - name: Install Android build tools
         run: sdkmanager 'platforms;android-34' 'build-tools;34.0.0'
       - run: npm run android:beta
+      - run: npm run test:e2e -- --workers=1
       - name: Native reporting tests
         working-directory: android
         run: ./gradlew testBetaUnitTest --no-daemon
