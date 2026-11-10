@@ -51,7 +51,8 @@ jobs:
       - run: npx playwright install --with-deps chromium
       - run: npm run test:reporting
       - name: Install Android build tools
-        run: sdkmanager 'platforms;android-34' 'build-tools;34.0.0'
+        run: |
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" 'platforms;android-34' 'build-tools;34.0.0'
       - run: npm run android:beta
       - run: npm run test:e2e -- --workers=1
       - name: Native reporting tests
@@ -120,7 +121,7 @@ jobs:
       - name: Install publisher
         run: |
           python -m pip install --require-hashes -r scripts/requirements-release.txt
-          sdkmanager 'platforms;android-34' 'build-tools;34.0.0'
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" 'platforms;android-34' 'build-tools;34.0.0'
       - name: Recheck trusted source
         run: python scripts/release_ci.py prepare --tag "$RELEASE_TAG" --build "$RUNNER_TEMP/rechecked-build.json"
       - name: Sign, verify retained history, and stage public payload
