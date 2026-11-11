@@ -1,3 +1,6 @@
 import type { TelemetryAdapter } from './telemetry-contract';
-// Foundation has no cloud transport. Subsequent stack layers register adapters here.
-export function telemetryAdapters(_env: Record<string, unknown>): TelemetryAdapter[] { return []; }
+import { createPostHogAdapter } from './posthog-telemetry';
+export function telemetryAdapters(env: Record<string, unknown>): TelemetryAdapter[] {
+  const posthog = createPostHogAdapter(env);
+  return posthog ? [posthog] : [];
+}

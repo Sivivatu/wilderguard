@@ -1,11 +1,14 @@
+import { Capacitor } from '@capacitor/core';
+import { App } from '@capacitor/app';
 import { createTelemetryController } from './telemetry-controller';
 import { createGameplayCollector } from './gameplay-telemetry';
 import { readTelemetryBuild } from './telemetry-policy';
 import { telemetryAdapters } from './telemetry-adapters';
 const build = readTelemetryBuild(import.meta.env);
+let nativeAllowed = !Capacitor.isNativePlatform();
 const storage = { getItem: (key: string) => localStorage.getItem(key), setItem: (key: string, value: string) => localStorage.setItem(key, value), removeItem: (key: string) => localStorage.removeItem(key) };
 export const telemetry = createTelemetryController({ build, storage, adapters: build ? telemetryAdapters(import.meta.env) : [],
-  onChange: () => gameplayTelemetry.reset() });
+  allowed: () => nativeAllowed, onChange: () => gameplayTelemetry.reset() });
 export const gameplayTelemetry = createGameplayCollector({ build: build ?? 'disabled', enabled: telemetry.enabled, emit: telemetry.record });
 
 export function telemetrySettings(): string {
@@ -21,4 +24,11 @@ if (build) {
   window.addEventListener('online', flush);
   document.addEventListener('visibilitychange', () => { if (!document.hidden) flush(); });
   setInterval(flush, 15_000); flush();
+  if (Capacitor.isNativePlatform()) {
+    // A beta-configured web bundle must still stay off inside a public Android package.
+    void App.getInfo().then(info => {
+      nativeAllowed = info.id === 'com.wilderguard.game.beta';
+      if (nativeAllowed) flush(); else telemetry.setChoice('off');
+    }).catch(() => { telemetry.setChoice('off'); });
+  }
 }
