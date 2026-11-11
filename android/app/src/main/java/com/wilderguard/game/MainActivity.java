@@ -6,6 +6,13 @@ import com.getcapacitor.BridgeActivity;
 
 public class MainActivity extends BridgeActivity {
     @Override
+    protected void load() {
+        // Register after auto-discovered plugins so our privacy adapter owns this bridge ID.
+        registerPlugin(WilderguardSentry.class);
+        super.load();
+    }
+
+    @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         enterImmersiveMode();

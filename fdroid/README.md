@@ -6,7 +6,7 @@ Wilderguard Beta is an unlisted, developer-operated F-Droid repository. It is **
 
 The beta package is `com.wilderguard.game.beta`. Beta `0.1.0-beta.9` (versionCode 9) is recommended by the live signed feed and available as a [direct signed APK](https://sivivatu.github.io/wilderguard-beta/fdroid/repo/com.wilderguard.game.beta_9.apk). It installs alongside the original debug preview with a separate save. Updating an earlier beta preserves its beta checkpoint, with older towers receiving full health. It supports API 22 and newer with an up-to-date Android WebView, targets API 34, and supports compact landscape phone play as well as the intended Samsung Tab S4. Physical-device and F-Droid client installation checks are pending.
 
-The public page and repository are meant to contain only install material: the landing page, signed APK, F-Droid indexes and metadata, images, and published certificate fingerprints. The public GitHub Pages source repository `Sivivatu/wilderguard-beta` distributes this static payload and does not contain this game’s source code. The distribution link is public; “unlisted” only means it is outside F-Droid’s official catalog. Anyone with the URL can fetch the assets. Do not describe this as private distribution.
+The public page and repository contain install material: the landing page, signed APKs, F-Droid indexes and metadata, images, and published certificate fingerprints. The [public game source](https://github.com/Sivivatu/wilderguard) and [binary-only distribution repository](https://github.com/Sivivatu/wilderguard-beta) are separate. The distribution link is public; “unlisted” only means it is outside F-Droid’s official catalog. Anyone with the URL can fetch the assets. Do not describe this as private distribution.
 
 **Publication check (1 November 2026):** The live page is <https://sivivatu.github.io/wilderguard-beta/> and the feed is <https://sivivatu.github.io/wilderguard-beta/fdroid/repo>. An independent HTTPS download verified the live page, images, robots/noindex directives, both signed F-Droid index formats, the APK hash, its permanent signing certificate, and APK v1/v2 signature schemes. F-Droid client installation and a two-version update have not been verified.
 
@@ -29,7 +29,35 @@ The public page and repository are meant to contain only install material: the l
 - For beta 3, preserve a fresh, sorted manifest for the Android build and all web assets included in the APK, including the compact battle UI, defense guide, and shared combat-stat code. Do not reuse the beta 2 manifest. Keep the manifest private with the other local build provenance.
 - Set `CurrentVersion` and `CurrentVersionCode` in `fdroid/metadata/com.wilderguard.game.beta.yml` to the new release before generating the signed feed. Verify the v1 suggested version and v2 release channels recommend the latest version; retaining the old recommendation can hide the update behind the beta channel.
 - Give the publisher separate paths for persistent state and public output. State retains the signing certificate pins, previous signed indexes, and every released APK. The public output must start empty and contain only the validated install payload. Never publish state, the source manifest, secret exports, keystores, or signing configuration.
-- Publish the validated output to the static distribution repository only after the complete release check. No CI secret mirror is configured; run the signing/publishing workflow locally.
+
+### Tag-based CI publication
+
+The source repository is adding a tag-triggered workflow at [`.github/workflows/beta-release.yml`](../.github/workflows/beta-release.yml), with orchestration in [`scripts/release_ci.py`](../scripts/release_ci.py). The workflow must be merged to `main` and its protected GitHub Actions settings configured before a tag can publish. The protected environment, encrypted signing credentials, dedicated distribution deploy key, main-branch checks and tag restrictions were configured on 7 November 2026. Review/merge and a real end-to-end tag publication are still pending; historical releases below were published using the local process.
+
+For a release, review and merge one commit that updates both `android/app/build.gradle` and `fdroid/metadata/com.wilderguard.game.beta.yml`. Create a numbered `vX.Y.Z-beta.N` tag on that reviewed `main` commit. The tag, Android `versionCode`/`versionName`, and feed recommendation must match. Use a new code greater than the current maximum, which is 9; the next release starts at 10. Never reuse a tag or version.
+
+The build job runs checks, builds an unsigned APK, records its source digest, and rejects APKs containing maps or key files. The publishing job waits for maintainer approval in the `beta-release` environment. It needs these eight existing signing credentials as encrypted environment secrets:
+
+```text
+APK_KEYSTORE_BASE64
+APK_KEYSTORE_PASSWORD
+APK_KEY_ALIAS
+APK_KEY_PASSWORD
+FDROID_KEYSTORE_BASE64
+FDROID_KEYSTORE_PASSWORD
+FDROID_KEY_ALIAS
+FDROID_KEY_PASSWORD
+```
+
+It also needs `DISTRIBUTION_DEPLOY_KEY`, a dedicated SSH key registered with write access only to `Sivivatu/wilderguard-beta`. Restrict the environment to numbered beta tags and protect beta tags against update/deletion. Keep the permanent APK and F-Droid signing keys unchanged; the deploy key only grants distribution-repository write access. Do not put credentials in repository files, artifacts, command arguments, or chat.
+
+After verifying the full retained feed and permanent certificate pins, CI publishes only allowlisted distribution files to the existing `main` branch and atomically pushes the matching distribution tag. After verifying the live Pages payload, it creates a GitHub prerelease on `Sivivatu/wilderguard` with the exact same signed APK, checksum, and source-bound receipt. A retry uses the immutable signed APK and receipt so a failure after feed publication can finish the source prerelease without changing prior releases. The existing install/feed URLs and every prior APK remain intact.
+
+CI sets all Sentry build variables to empty. Reporting remains off until native crash/reconnect and physical-device validation is complete. Source maps and local symbolication files are never published by this workflow. Beta 9 remains unchanged and has no reporting. A tag or review commit alone does not make a new app version until the workflow and secrets are ready and the protected release job completes.
+
+The manual publisher procedure below remains an owner-operated recovery path. Use it only with a securely preserved state directory and after checking whether a matching CI tag/receipt already exists; do not publish a different APK for an existing release.
+
+- Publish the validated output to the static distribution repository only after the complete release check. The local workflow remains available for recovery when CI is not configured or a reviewed incident response requires it.
 
 ### Signing credentials
 
@@ -80,13 +108,19 @@ The source manifest is sensitive build provenance and stays private. Keep the pe
 1. Every beta release gets a new, increasing `versionCode` and a unique numbered beta `versionName`. Never change a released APK or republish an old version under different bytes.
 2. Keep both signing keys and the public fingerprint pins permanent. Do not regenerate either keystore or copy keys from the original preview, `battery-monitor-eu`, or another app.
 3. Retain earlier signed APKs and signed F-Droid indexes in persistent state so F-Droid clients can verify updates.
-4. Keep signing state, release manifest, and source provenance private and apart from the static public payload.
+4. Keep signing state, the source-input manifest, and full local build provenance private. The public release manifest and receipt contain only release metadata, APK hashes, source commit, and the source snapshot digest.
 5. Check advisories with `npm audit` for every release; the dependency set may change. A prior clean audit does not promise a future one.
-6. There is no CI secret mirror. All release signing and feed generation happens locally using the dedicated vault path.
+6. Keep CI signing secrets only in the protected source-repository release environment. The local recovery path uses the dedicated vault path and must not export credentials into the repository.
+
+### Error-reporting release gate
+
+Published beta 9 remains unchanged and has no Sentry reporting. Before any reporting-enabled release, complete [Sentry setup and delivery/device validation](../docs/error-reporting.md), verify the selected €0/free-only policy with no paid overages, inspect the signed APK for maps/credentials, and update feed privacy/anti-feature disclosures to match actual behavior. Preserve local symbolication artifacts privately. The current release workflow explicitly disables Sentry and cannot publish a reporting-enabled build. See [public source and APK releases](../docs/publication.md) for the separate publication workflow.
+
+Code-review commits and pushes do not publish an app release. After the workflow is configured and merged, a matching source tag starts the protected signing and publication job. The distribution commit and matching distribution tag preserve the existing binary-only Pages feed; the source GitHub prerelease attaches the same signed APK and checksum. A source tag alone does not publish until required checks and environment approval succeed.
 
 ## Licensing and testing status
 
-The F-Droid metadata currently uses `License: Unknown`; Eric has not chosen a source-code or app license. Do not mark this project open source or claim the source is available until the creator and family choose and publish an appropriate license and source repository.
+The F-Droid metadata currently uses `License: Unknown`; Eric has not chosen a source-code or app license. The owner has authorized public source publication to [Sivivatu/wilderguard](https://github.com/Sivivatu/wilderguard). Public source visibility does not establish an open-source license or eligibility for F-Droid's official catalog; keep the license field unchanged until the creator and family select an appropriate license.
 
 Beta `0.1.0-beta.4` (versionCode 4) is published with level 3 Frost nova. Refresh F-Droid or download the [signed APK](https://sivivatu.github.io/wilderguard-beta/fdroid/repo/com.wilderguard.game.beta_4.apk). On 1 November 2026, independent HTTPS downloads verified all 21 payload files, all four APK hashes and v1/v2 signatures, permanent signing pins, both signed index formats, v1 suggested version 4 and v2 normal release channels. Betas 1–3 remain unchanged. Physical Samsung Tab S4 installation and an actual F-Droid client update remain unverified.
 

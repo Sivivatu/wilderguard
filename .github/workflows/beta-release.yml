@@ -1,0 +1,159 @@
+name: Beta build and release
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+    tags: ['v*-beta.*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ startsWith(github.ref, 'refs/tags/') && 'beta-publication' || format('beta-check-{0}', github.ref) }}
+  cancel-in-progress: false
+
+env:
+  # Enabling reporting requires a reviewed change after native/device release gates.
+  VITE_SENTRY_DSN: ''
+  VITE_SENTRY_ENVIRONMENT: ''
+  VITE_SENTRY_RELEASE: ''
+  VITE_SENTRY_DIST: ''
+
+jobs:
+  build:
+    name: Test and build unsigned beta
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24.22.2'
+          cache: npm
+      - uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78 # v6.2.0
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Validate tag and source provenance
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: python3 scripts/release_ci.py prepare --tag "$RELEASE_TAG" --build "$RUNNER_TEMP/build.json"
+      - run: npm ci
+      - run: npm audit --omit=dev --audit-level=low
+      - run: npm run test:coverage
+      - run: npm run test:release
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:reporting
+      - name: Install Android build tools
+        run: |
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" 'platforms;android-34' 'build-tools;34.0.0'
+      - run: npm run android:beta
+      - run: npm run test:e2e -- --workers=1
+      - name: Native reporting tests
+        working-directory: android
+        run: ./gradlew testBetaUnitTest --no-daemon
+      - name: Reject maps and private key formats in APK
+        run: |
+          python3 - <<'PY'
+          import zipfile
+          with zipfile.ZipFile('android/app/build/outputs/apk/beta/app-beta-unsigned.apk') as apk:
+              forbidden = [name for name in apk.namelist() if name.endswith(('.map', '.jks', '.keystore', '.p12', '.pfx'))]
+              if forbidden:
+                  raise SystemExit('Private/debug artifacts found in APK')
+          PY
+      - name: Seal unsigned artifact provenance
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/unsigned-beta"
+          cp android/app/build/outputs/apk/beta/app-beta-unsigned.apk "$RUNNER_TEMP/unsigned-beta/app.apk"
+          python3 scripts/release_ci.py prepare --tag "$RELEASE_TAG" \
+            --apk "$RUNNER_TEMP/unsigned-beta/app.apk" --build "$RUNNER_TEMP/unsigned-beta/build.json"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          name: unsigned-beta
+          path: ${{ runner.temp }}/unsigned-beta/
+          if-no-files-found: error
+          retention-days: 3
+
+  publish:
+    name: Sign and publish existing F-Droid feed
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    environment: beta-release
+    permissions:
+      contents: write
+    env:
+      RELEASE_TAG: ${{ github.ref_name }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: Sivivatu/wilderguard-beta
+          ref: main
+          path: distribution
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: unsigned-beta
+          path: unsigned
+      - uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78 # v6.2.0
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: '3.12'
+      - name: Install publisher
+        run: |
+          python -m pip install --require-hashes -r scripts/requirements-release.txt
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" 'platforms;android-34' 'build-tools;34.0.0'
+      - name: Recheck trusted source
+        run: python scripts/release_ci.py prepare --tag "$RELEASE_TAG" --build "$RUNNER_TEMP/rechecked-build.json"
+      - name: Sign, verify retained history, and stage public payload
+        env:
+          APK_KEYSTORE_BASE64: ${{ secrets.APK_KEYSTORE_BASE64 }}
+          APK_KEYSTORE_PASSWORD: ${{ secrets.APK_KEYSTORE_PASSWORD }}
+          APK_KEY_ALIAS: ${{ secrets.APK_KEY_ALIAS }}
+          APK_KEY_PASSWORD: ${{ secrets.APK_KEY_PASSWORD }}
+          FDROID_KEYSTORE_BASE64: ${{ secrets.FDROID_KEYSTORE_BASE64 }}
+          FDROID_KEYSTORE_PASSWORD: ${{ secrets.FDROID_KEYSTORE_PASSWORD }}
+          FDROID_KEY_ALIAS: ${{ secrets.FDROID_KEY_ALIAS }}
+          FDROID_KEY_PASSWORD: ${{ secrets.FDROID_KEY_PASSWORD }}
+        run: |
+          python scripts/release_ci.py stage --tag "$RELEASE_TAG" \
+            --apk unsigned/app.apk \
+            --build unsigned/build.json --distribution distribution --assets "$RUNNER_TEMP/release-assets"
+      - name: Atomically publish feed commit and matching distribution tag
+        env:
+          DISTRIBUTION_DEPLOY_KEY: ${{ secrets.DISTRIBUTION_DEPLOY_KEY }}
+        run: |
+          umask 077
+          key_file="$RUNNER_TEMP/distribution-deploy-key"
+          known_hosts="$RUNNER_TEMP/github-known-hosts"
+          trap 'rm -f "$key_file" "$known_hosts"' EXIT
+          printf '%s\n' "$DISTRIBUTION_DEPLOY_KEY" > "$key_file"
+          printf '%s\n' 'github.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GKJl' > "$known_hosts"
+          export GIT_SSH_COMMAND="ssh -i $key_file -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile=$known_hosts"
+          git -C distribution remote set-url origin git@github.com:Sivivatu/wilderguard-beta.git
+          python scripts/release_ci.py push --tag "$RELEASE_TAG" --distribution distribution
+      - name: Verify live Pages feed
+        run: python scripts/release_ci.py verify-pages --tag "$RELEASE_TAG" --distribution distribution
+      - name: Publish identical APK and checksum on source GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python scripts/release_ci.py release --tag "$RELEASE_TAG" --assets "$RUNNER_TEMP/release-assets"

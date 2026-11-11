@@ -47,7 +47,7 @@ test('play a real wave, pause, cast a spell and receive a reward', async ({ page
   await expect(page.locator('#spell-freeze')).toHaveText('1');
   await page.locator('#speed').click();
   await expect(page.locator('#speed')).toHaveText('2×');
-  for (let i = 0; i < 7; i += 1) await page.clock.runFor(10000);
+  for (let i = 0; i < 7 && await page.locator('#start-wave').isDisabled(); i += 1) await page.clock.runFor(10000);
   await expect(page.locator('#start-wave')).toBeEnabled();
   await expect(page.locator('#wave-instruction')).toContainText('Wave cleared! +48 diamonds');
   await expect(page.locator('#diamond-count')).toHaveText('98');

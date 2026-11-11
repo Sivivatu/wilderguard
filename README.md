@@ -1,5 +1,7 @@
 # Wilderguard
 
+Public source: [Sivivatu/wilderguard](https://github.com/Sivivatu/wilderguard). Signed APKs can also be downloaded from [GitHub Releases](https://github.com/Sivivatu/wilderguard/releases); existing F-Droid installations keep using the feed below. See [source, releases and publication](docs/publication.md).
+
 **Made by Eric, a 7-year-old boy.**
 
 A pixel-art tower-defense adventure through Elderglen: five places to free, five waves in each, and a little kingdom worth protecting. Build your defenses, hold back waves of orcs, and bring the country home.
@@ -40,7 +42,7 @@ Win diamonds after every wave. On wave 3, earn a Deep Freeze spell; on wave 5, e
 
 Pause or play at 2× speed to adjust how the game feels. Supported browsers have a working fullscreen enter/exit control; the control is hidden in the Android app, installed web app and unsupported browsers. In the Android app or when installed to your home screen, the game opens directly into a touch-friendly battle view. Progress saves on this device between waves; existing beta saves give their towers full health. If monsters win, you can retry from your last saved setup, including its tower health. Your diamonds and spells carry to the next region, where you choose new towers.
 
-Each battlefield uses a distinct pixelated photographic background in the approved Sunburst style B, with its own road drawn in Canvas. The campaign map uses SVG. Orcs use pixelated artwork generated from the concepts Eric selected. The game bundles all five backgrounds, four sprites and fonts, so battles also work offline. Wilderguard has no accounts, game server, tracking, advertising, or in-app purchases. The Samsung Galaxy Tab S4 in landscape is the target device.
+Each battlefield uses a distinct pixelated photographic background in the approved Sunburst style B, with its own road drawn in Canvas. The campaign map uses SVG. Orcs use pixelated artwork generated from the concepts Eric selected. The game bundles all five backgrounds, four sprites and fonts, so battles also work offline. Wilderguard has no accounts, game server, gameplay analytics, advertising, or in-app purchases. Published beta 8 has no reporting. This worktree implements automatic Sentry error reports with a privacy notice and off switch, configured for a free-only EU project in local validation builds. No reporting-enabled release has been published. See [error reporting and privacy](docs/error-reporting.md). The Samsung Galaxy Tab S4 in landscape is the target device.
 
 ## Play in a browser
 
@@ -79,6 +81,7 @@ npm test                         # game and save-file unit tests
 npm run test:coverage             # coverage report
 npx playwright install chromium   # install the browser for the end-to-end tests
 npm run test:e2e                  # browser end-to-end tests
+npm run test:reporting            # local intercepted error/offline delivery fixture
 npm run build                     # type-check, build, and bundle offline assets
 npm run android:sync              # rebuild web assets and sync Android
 npm run android:apk               # build the debug APK
@@ -91,7 +94,9 @@ A post-install compatibility patch keeps Capacitor CLI 6 working with the patche
 
 See [NOTES.md](NOTES.md) for Eric’s original idea and the work still needed before a wider release. See [fdroid/README.md](fdroid/README.md) for the beta publishing runbook.
 
-## Local version control
+## Original local version control
+
+The following records the setup before the owner authorized public publication. See [the publication workflow](docs/publication.md) for the current repository and release locations.
 
 The complete project is tracked in a local Git repository on `main`, with source checkpoints tagged `v0.1.0-beta.2` through `v0.1.0-beta.9`. The source repository has no remote and has not been pushed. Android install material is published separately through the existing F-Droid distribution repository.
 
