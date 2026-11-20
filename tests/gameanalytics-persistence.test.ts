@@ -3,18 +3,9 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import { afterEach, expect, it, vi } from 'vitest';
-import { openRelayState } from '../server/gameanalytics-state';
+import { openRelayState, type RelaySnapshot } from '../server/gameanalytics-state';
 import { createGameAnalyticsRelay } from '../server/gameanalytics-relay';
 import { startEvent } from './telemetry-fixture';
-
-interface RelaySnapshot {
-  seen: Array<[string, { digest: string; at: number; status: number }]>
-  runs: Array<[string, { count: number; at: number; started: boolean }]>
-  minute: number
-  requests: number
-  day: number
-  dailyEvents: number
-}
 
 const directories: string[] = [];
 afterEach(() => { for (const directory of directories.splice(0)) rmSync(directory, { recursive: true, force: true }); });
@@ -126,4 +117,25 @@ it('fails closed before forwarding when reservations cannot be saved', async () 
   expect((await relay(request())).status).toBe(503);
   expect(fetcher).not.toHaveBeenCalled();
   expect((await relay(request())).status).toBe(503);
+});
+
+it('removes expired correlation IDs on startup and during idle maintenance', () => {
+  const { path } = fixture();
+  let time = startEvent.at;
+  const state = openRelayState(path, 'same-project');
+  const old = time - 49 * 60 * 60 * 1000;
+  state.save({ ...snapshot(), seen: [['old-id', { digest: 'digest', at: old, status: 200 }]], runs: [['old-run', { count: 1, at: old, started: true }]] });
+  const relay = createGameAnalyticsRelay(config, { state, now: () => time });
+  expect(state.load()?.seen).toEqual([]);
+  expect(state.load()?.runs).toEqual([]);
+  state.close();
+  const activeState = openRelayState(path, 'same-project');
+  activeState.save({ ...snapshot(), seen: [['recent-id', { digest: 'digest', at: time, status: 200 }]], runs: [['recent-run', { count: 1, at: time, started: true }]], minute: -1, day: -1 });
+  const idle = createGameAnalyticsRelay(config, { state: activeState, now: () => time });
+  expect(activeState.load()?.seen).toHaveLength(1);
+  time += 49 * 60 * 60 * 1000;
+  expect(idle.maintain()).toBe(true);
+  expect(activeState.load()?.seen).toEqual([]);
+  expect(activeState.load()?.runs).toEqual([]);
+  activeState.close();
 });
