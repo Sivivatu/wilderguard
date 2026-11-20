@@ -2,6 +2,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 afterEach(() => { vi.unstubAllEnvs(); vi.unstubAllGlobals(); vi.useRealTimers(); vi.resetModules(); });
 describe('gameplay disclosure and startup', () => {
   it('shows public unavailable choices and performs no startup delivery', async () => {
+    // Local .env.local can configure beta telemetry; this case explicitly models a public build.
+    vi.stubEnv('VITE_GAMEPLAY_CHANNEL', ''); vi.stubEnv('VITE_GAMEPLAY_BUILD', '');
     const data = new Map(); vi.stubGlobal('localStorage', { getItem: (k: string) => data.get(k), setItem: (k: string, v: string) => data.set(k, v) });
     const { telemetrySettings, telemetry } = await import('../src/telemetry');
     expect(telemetry.choice()).toBe('off'); expect(telemetrySettings()).toContain('disabled in this build');
