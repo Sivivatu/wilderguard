@@ -7,7 +7,7 @@ This record distinguishes local transport tests from real service evidence. See 
 - PostHog EU project and dashboard are available.
 - Verified destinations: [PostHog project](https://eu.posthog.com/project/360532) and [dashboard](https://eu.posthog.com/project/360532/dashboard/1136395); configured beta web build: [private beta test site](https://remote-dev.emperor-quillback.ts.net:8444/).
 - Live PostHog gameplay events and one synthetic Sentry error were retrieved from their projects. These were separate provider checks; the Sentry event does not validate gameplay event mapping.
-- PostHog IP and country properties were empty in the inspected live events.
+- PostHog IP and country properties were empty in the inspected live events. The three successful live browser event UUIDs (including the queued offline start) were retrieved from the intended project, with the expected shared start/terminal attempt ID. A project persons query returned zero profiles.
 - Offline reload, reconnect, and delivery passed against a static local server.
 - The configured beta web build was served privately through Tailscale at `https://remote-dev.emperor-quillback.ts.net:8444/`.
 - The organization uses a paid PostHog account, while the organization-wide Product Analytics spending cap is $0. No billing changes were made.
@@ -29,7 +29,7 @@ This record distinguishes local transport tests from real service evidence. See 
 - GREEN: repeated `npm run test:coverage` passed all 420 tests: 99.49% lines, 93.87% branches, 96.35% functions, and 96.83% statements.
 - Focused relay suites: 22 checks passed. Synthetic provider browser suite: 3 checks passed. Release workflow checks: 37 passed; no release or publication was performed.
 - Unsigned `npm run android:beta` build and `testBetaUnitTest` passed with JDK 17 and Android SDK 34. No APK signing, upload, or release occurred.
-- `npm run test:reporting`: 4 browser checks passed. The full 33-journey gameplay suite is rerunning after identifying a baseline Sentry notice from inherited local `.env.local` configuration; E2E configuration isolation is still in progress and not yet claimed as green.
+- `npm run test:reporting`: 4 browser checks passed. The isolated baseline gameplay suite passed all 33 journeys in 2.5 minutes. Its initial run inherited the configured Sentry notice and clicks were blocked; explicitly blanked test environment values reproduced GREEN, and the final fixture builds into `artifacts/gameplay-fixture` so developer builds cannot overwrite its assets.
 - A Vite preview cache interaction involving `Vary: Origin` was isolated; the static-server route was used for offline/reconnect validation so preview cache behavior would not be confused with relay/provider behavior.
 - General and security reviews reported no critical/high findings in the reviewed implementation. The TDD history records and tests the idle-expiry/quota regression fixes.
 
