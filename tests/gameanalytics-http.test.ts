@@ -1,12 +1,12 @@
 import { afterEach, expect, it, vi } from 'vitest';
 import { request as httpRequest, type Server } from 'node:http';
-import { createPrivateRelayServer } from '../server/gameanalytics-http';
+import { approvedRelayCaller, createPrivateRelayServer } from '../server/gameanalytics-http';
 
 const servers: Server[] = [];
 afterEach(async () => { for (const server of servers.splice(0)) await new Promise<void>(resolve => server.close(() => resolve())); });
-async function fixture() {
+async function fixture(access = {}) {
   const handler = vi.fn(async (_request: Request) => new Response('{"accepted":true}'));
-  const server = createPrivateRelayServer(handler, ['owner@example.test']);
+  const server = createPrivateRelayServer(handler, ['owner@example.test'], access);
   servers.push(server);
   await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve));
   const address = server.address() as { port: number };
@@ -46,4 +46,47 @@ it('enforces the HTTP body limit and keeps upstream errors generic', async () =>
 it('requires an explicit bounded tester allowlist', () => {
   expect(() => createPrivateRelayServer(async () => new Response(), [])).toThrow();
   expect(() => createPrivateRelayServer(async () => new Response(), ['*'])).toThrow();
+});
+
+it('authenticates an explicitly approved tagged node for preflight and uploads', async () => {
+  const lookupNode = vi.fn(async () => 'nApprovedNode');
+  const { handler, url } = await fixture({ allowedNodeIds: ['nApprovedNode'], lookupNode });
+  const headers = { 'X-Forwarded-For': '100.64.0.10', 'X-Forwarded-Proto': 'https', Origin: 'https://localhost' };
+  expect((await fetch(url, { method: 'OPTIONS', headers })).status).toBe(200);
+  expect((await fetch(url, { method: 'POST', headers, body: '{}' })).status).toBe(200);
+  expect(lookupNode).toHaveBeenCalledWith('100.64.0.10');
+  expect([...handler.mock.calls[1][0].headers.keys()].sort()).toEqual(['content-type', 'origin', 'x-telemetry-epoch']);
+});
+
+it('never falls back from a rejected human identity and rejects ambiguous forwarded identities', async () => {
+  const lookupNode = vi.fn(async () => 'nApprovedNode');
+  const { handler, url } = await fixture({ allowedNodeIds: ['nApprovedNode'], lookupNode });
+  const headers = { 'X-Forwarded-For': '100.64.0.10', 'X-Forwarded-Proto': 'https' };
+  for (const invalid of [
+    { ...headers, 'Tailscale-User-Login': 'other@example.test' },
+    { ...headers, 'Tailscale-User-Login': '' },
+    { ...headers, 'X-Forwarded-For': '192.0.2.123, 100.64.0.10' },
+    { ...headers, 'X-Forwarded-For': 'host.example.test' },
+    { ...headers, 'X-Forwarded-For': '100.64.0.10:443' },
+    { ...headers, 'X-Forwarded-For': 'fe80::1%eth0' },
+    { ...headers, 'X-Forwarded-Proto': 'http' },
+    { ...headers, 'X-Forwarded-Proto': 'https, http' },
+  ]) expect((await fetch(url, { method: 'OPTIONS', headers: invalid })).status).toBe(403);
+  expect(lookupNode).not.toHaveBeenCalled();
+  expect(handler).not.toHaveBeenCalled();
+});
+
+it('fails closed on unknown nodes and local identity lookup failure', async () => {
+  for (const result of ['nUnapprovedNode', null]) {
+    const { handler, url } = await fixture({ allowedNodeIds: ['nApprovedNode'], lookupNode: async () => result });
+    expect((await fetch(url, { method: 'OPTIONS', headers: { 'X-Forwarded-For': '100.64.0.10', 'X-Forwarded-Proto': 'https' } })).status).toBe(403);
+    expect(handler).not.toHaveBeenCalled();
+  }
+  const { url } = await fixture({ allowedNodeIds: ['nApprovedNode'], lookupNode: async () => { throw Error('LocalAPI unavailable'); } });
+  expect((await fetch(url, { method: 'OPTIONS', headers: { 'X-Forwarded-For': '100.64.0.10', 'X-Forwarded-Proto': 'https' } })).status).toBe(403);
+});
+
+it('does not trust identity headers from a non-loopback connection', async () => {
+  expect(await approvedRelayCaller({ 'tailscale-user-login': 'owner@example.test' }, '192.0.2.123', ['owner@example.test'], {})).toBe(false);
+  expect(await approvedRelayCaller({ 'x-forwarded-for': '100.64.0.10', 'x-forwarded-proto': 'https' }, undefined, ['owner@example.test'], { allowedNodeIds: ['nApprovedNode'], lookupNode: async () => 'nApprovedNode' })).toBe(false);
 });

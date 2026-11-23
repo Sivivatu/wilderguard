@@ -1,14 +1,15 @@
 import { expect, test } from '@playwright/test';
-test('public build discloses optional statistics but stays off through play and reload', async ({ page }) => {
+test('public build exposes one disabled statistics switch and sends nothing through play and reload', async ({ page }) => {
   const analyticsRequests: string[] = [];
-  page.on('request', request => { if (/posthog|gameanalytics|telemetry/i.test(new URL(request.url()).hostname)) analyticsRequests.push(request.url()); });
+  page.on('request', request => { if (/posthog|gameanalytics|telemetry/i.test(request.url())) analyticsRequests.push(request.url()); });
   await page.goto('/');
   await page.getByRole('button', { name: 'Settings', exact: true }).click();
   await expect(page.getByText('Gameplay statistics are disabled in this build.')).toBeVisible();
-  const choice = page.getByRole('combobox', { name: 'Gameplay statistics' });
-  await expect(choice).toHaveValue('off');
-  await expect(choice.locator('option[value="posthog"]')).toHaveJSProperty('disabled', true);
-  await expect(choice.locator('option[value="gameanalytics"]')).toHaveJSProperty('disabled', true);
+  const toggle = page.getByRole('switch', { name: 'Gameplay statistics', exact: true });
+  await expect(toggle).toHaveAttribute('aria-checked', 'false'); await expect(toggle).toBeDisabled();
+  await expect(toggle).toContainText('Off');
+  await expect(page.getByRole('combobox', { name: 'Gameplay statistics' })).toHaveCount(0);
+  await expect(page.getByText(/both PostHog and GameAnalytics/)).toBeVisible();
   await expect(page.getByText(/Sent reports cannot be recalled/)).toBeVisible();
   await page.getByRole('button', { name: 'Close dialog', exact: true }).click();
   const canvas = page.locator('#game-canvas'); const box = (await canvas.boundingBox())!;
@@ -19,5 +20,5 @@ test('public build discloses optional statistics but stays off through play and 
   await page.reload(); await expect(page.locator('#diamond-count')).toHaveText('50');
   expect(analyticsRequests).toEqual([]);
   expect(await page.evaluate(() => JSON.parse(localStorage.getItem('wilderguard-campaign-v1')!).diamonds)).toBe(50);
-  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('wilderguard-telemetry-outbox-v1')!).events)).toEqual([]);
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('wilderguard-telemetry-outbox-v2')!).entries)).toEqual([]);
 });

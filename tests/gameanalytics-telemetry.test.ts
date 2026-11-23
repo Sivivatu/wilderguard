@@ -20,7 +20,7 @@ describe('GameAnalytics private relay adapter', () => {
     expect(options!.headers).toEqual({ 'Content-Type': 'application/json', 'X-Telemetry-Epoch': 'family-1' });
     expect(await adapter.send({ ...startEvent, private: 'no' } as never, signal)).toBe('drop'); expect(fetcher).toHaveBeenCalledTimes(1);
   });
-  it.each([[400, 'drop'], [409, 'drop'], [422, 'drop'], [408, 'retry'], [429, 'retry'], [503, 'retry']])('classifies relay status %i as %s', async (status, result) => {
+  it.each([[400, 'drop'], [409, 'drop'], [422, 'drop'], [401, 'retry'], [403, 'retry'], [408, 'retry'], [429, 'retry'], [503, 'retry']])('classifies relay status %i as %s', async (status, result) => {
     const adapter = createGameAnalyticsAdapter(config, async () => new Response(null, { status: status as number }))!;
     expect(await adapter.send(startEvent, new AbortController().signal)).toBe(result);
   });
