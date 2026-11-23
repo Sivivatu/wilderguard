@@ -16,7 +16,8 @@
     "android:beta": "npm run android:sync && cd android && ./gradlew assembleBeta",
     "test:release": "python3 -m unittest discover -s tests -p \"test_fdroid_beta.py\" && python3 -m unittest discover -s tests -p \"test_release_workflow.py\"",
     "errors:symbolicate": "node scripts/symbolicate-error.mjs",
-    "test:reporting": "node scripts/build-reporting-fixture.mjs && playwright test --config playwright.reporting.config.ts"
+    "test:reporting": "node scripts/build-reporting-fixture.mjs && playwright test --config playwright.reporting.config.ts",
+    "test:telemetry": "node scripts/build-telemetry-fixture.mjs && playwright test --config playwright.telemetry.config.ts"
   },
   "dependencies": {
     "@capacitor/android": "^6.2.1",
