@@ -1,31 +1,53 @@
 import { createTelemetryOutbox } from './telemetry-outbox';
-import { readChoice, saveChoice } from './telemetry-policy';
-import type { ProviderChoice, TelemetryAdapter, TelemetryEvent, TelemetryStorage } from './telemetry-contract';
+import { readPreference, savePreference } from './telemetry-policy';
+import { buildSchema, type TelemetryAdapter, type TelemetryEvent, type TelemetryPreference, type TelemetryStorage } from './telemetry-contract';
 interface Options { build: string | null; storage: TelemetryStorage; adapters: TelemetryAdapter[]; onChange?(): void; allowed?(): boolean }
 export function createTelemetryController({ build, storage, adapters, onChange, allowed = () => true }: Options) {
-  const scope = JSON.stringify(adapters.map(adapter => adapter.scope));
-  let choice: ProviderChoice = build ? readChoice(storage, scope) : 'off';
-  const adapter = () => adapters.find(item => item.choice === choice);
-  if (!adapter()) choice = 'off';
+  const destinations = [...adapters].sort((left, right) => left.choice.localeCompare(right.choice));
+  const scope = JSON.stringify({ build, providers: destinations.map(adapter => [adapter.choice, adapter.scope]) });
+  const hasConfiguration = () => buildSchema.safeParse(build).success && destinations.length === 2 &&
+    destinations.filter(adapter => adapter.choice === 'posthog').length === 1 &&
+    destinations.filter(adapter => adapter.choice === 'gameanalytics').length === 1;
+  const configured = () => hasConfiguration() && allowed();
+  let policyAvailable = true;
+  try {
+    const key = 'wilderguard-telemetry-choice-v1';
+    if (storage.removeItem) storage.removeItem(key); else storage.setItem(key, '');
+  } catch { policyAvailable = false; }
+  // Native identity verification may still be pending. Preserve durable consent,
+  // but gate all collection and delivery on allowed(); explicit denial revokes it.
+  let preference: TelemetryPreference = hasConfiguration() && policyAvailable ? readPreference(storage, scope) : 'off';
   let preferenceSaved = true;
-  let queue = makeQueue();
-  function makeQueue() {
-    const selected = adapter();
-    return createTelemetryOutbox({ storage, scope: build && selected ? `${build}:${selected.scope}` : 'off',
-      send: (event, signal) => selected && choice === selected.choice && readChoice(storage, scope) === choice ? selected.send(event, signal) : Promise.resolve('retry') });
+  const queue = createTelemetryOutbox({ storage, scope, send(provider, event, signal) {
+    const adapter = destinations.find(item => item.choice === provider);
+    return enabled() && adapter ? adapter.send(event, signal) : Promise.resolve('retry');
+  } });
+  function revoke() {
+    preference = 'off'; queue.purge();
+    preferenceSaved = savePreference(storage, scope, 'off');
+    if (!preferenceSaved) policyAvailable = false;
   }
-  const enabled = () => !!build && allowed() && choice !== 'off' && queue.available();
+  function reconcile() {
+    if (preference === 'on' && (!hasConfiguration() || !queue.available() || !policyAvailable || readPreference(storage, scope) !== 'on')) revoke();
+  }
+  function enabled() {
+    reconcile();
+    return preference === 'on' && configured() && policyAvailable && queue.available();
+  }
+  // No queue is deliverable without fresh v2 consent for this exact configuration.
+  if (preference === 'off' || !queue.available()) revoke();
   return {
-    choice: () => choice, enabled, available: () => queue.available(), preferenceSaved: () => preferenceSaved,
-    configured: (value: ProviderChoice) => !!build && allowed() && adapters.some(item => item.choice === value),
-    record(event: TelemetryEvent) { if (enabled()) queue.record(event); },
-    async flush() { if (enabled()) await queue.flush(); },
-    setChoice(value: ProviderChoice) {
-      queue.purge(); choice = 'off';
-      // Persist off first so a failed new preference cannot preserve old consent.
-      const storedOff = saveChoice(storage, scope, 'off'); preferenceSaved = storedOff;
-      if (storedOff && build && allowed() && adapters.some(item => item.choice === value) && saveChoice(storage, scope, value)) choice = value;
-      queue = makeQueue(); onChange?.();
+    preference: () => { reconcile(); return preference; }, enabled, configured,
+    available: () => policyAvailable && queue.available(), preferenceSaved: () => preferenceSaved,
+    record(event: TelemetryEvent) { if (enabled() && event.build === build) queue.record(event); reconcile(); },
+    async flush() { if (enabled()) await queue.flush(); reconcile(); },
+    setEnabled(value: boolean) {
+      revoke();
+      if (value === true && configured() && policyAvailable && queue.available() && preferenceSaved) {
+        preferenceSaved = savePreference(storage, scope, 'on');
+        if (preferenceSaved) preference = 'on';
+      }
+      onChange?.();
     },
   };
 }

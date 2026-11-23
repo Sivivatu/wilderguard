@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import { createGameAnalyticsRelay } from '../server/gameanalytics-relay.ts';
 import { createPrivateRelayServer } from '../server/gameanalytics-http.ts';
 import { openRelayState } from '../server/gameanalytics-state.ts';
+import { createTailscaleNodeLookup } from '../server/tailscale-node-lookup.ts';
 
 function main(): void {
   const port = Number(process.env.GA_RELAY_PORT ?? '8787');
@@ -18,7 +19,10 @@ function main(): void {
   try {
     const handler = createGameAnalyticsRelay(config, { state });
     if (!handler.maintain()) throw new Error('Relay state unavailable');
-    const server = createPrivateRelayServer(handler, (process.env.GA_ALLOWED_TAILSCALE_USERS ?? '').split(',').filter(Boolean));
+    const server = createPrivateRelayServer(handler, (process.env.GA_ALLOWED_TAILSCALE_USERS ?? '').split(',').filter(Boolean), {
+      allowedNodeIds: (process.env.GA_ALLOWED_TAILSCALE_NODE_IDS ?? '').split(',').filter(Boolean),
+      lookupNode: createTailscaleNodeLookup(),
+    });
     const maintenance = setInterval(() => { if (!handler.maintain()) { server.close(); process.exitCode = 1; } }, 60000);
     maintenance.unref();
     server.on('close', () => { clearInterval(maintenance); state.close(); });

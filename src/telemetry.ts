@@ -12,11 +12,8 @@ export const telemetry = createTelemetryController({ build, storage, adapters: b
 export const gameplayTelemetry = createGameplayCollector({ build: build ?? 'disabled', enabled: telemetry.enabled, emit: telemetry.record });
 
 export function telemetrySettings(): string {
-  const options = (['off', 'posthog', 'gameanalytics'] as const).map(choice => {
-    const label = { off: 'Off', posthog: 'PostHog', gameanalytics: 'GameAnalytics' }[choice];
-    return `<option value="${choice}" ${choice === telemetry.choice() ? 'selected' : ''} ${choice !== 'off' && !telemetry.configured(choice) ? 'disabled' : ''}>${label}${choice !== 'off' && !telemetry.configured(choice) ? ' (unavailable)' : ''}</option>`;
-  }).join('');
-  return `<h3>Optional beta gameplay statistics</h3><p>Off until you choose a configured provider. Sends wave starts and outcomes, health, diamonds, defense counts and sampled frame timings. Random run IDs reset on launch; no names, saves, exact touches, location, screenshots or replay. PostHog receives your network address; location enrichment is disabled. GameAnalytics uses a private relay, which receives your network address. Only one provider receives new statistics. Queued reports expire after 48 hours; turning Off or changing provider clears them. Sent reports cannot be recalled. This is separate from automatic error reports.</p><label class="setting-row"><span>Gameplay statistics</span><select id="gameplay-provider" aria-label="Gameplay statistics">${options}</select></label>${!build ? '<p>Gameplay statistics are disabled in this build.</p>' : ''}${!telemetry.preferenceSaved() ? '<p role="alert">Off could not be saved. Statistics are off for this session only. Clear app data before restarting or sharing this device.</p>' : ''}${!telemetry.available() ? '<p>Statistics storage is unavailable. Delivery is disabled; an Off selection may not survive restart. Clear app data before sharing this device.</p>' : ''}`;
+  const isOn = telemetry.preference() === 'on';
+  return `<h3>Optional beta gameplay statistics</h3><p>Off until you turn On. When On, sends the same gameplay statistics to both PostHog and GameAnalytics: wave starts and outcomes, health, diamonds, defense counts and sampled frame timings. Random run IDs reset on launch; no names, saves, exact touches, location, screenshots or replay. PostHog receives your network address; location enrichment is disabled. GameAnalytics uses a private relay, which receives your network address. Queued reports expire after 48 hours; turning Off clears queued reports and cancels pending delivery to both providers. Sent reports cannot be recalled. This is separate from automatic error reports.</p><button class="setting-row" id="toggle-gameplay-statistics" role="switch" aria-label="Gameplay statistics" aria-checked="${isOn}" ${!telemetry.configured() ? 'disabled' : ''}><span>Gameplay statistics</span><strong>${isOn ? 'On' : 'Off'}</strong></button>${!build ? '<p>Gameplay statistics are disabled in this build.</p>' : ''}${!telemetry.preferenceSaved() ? '<p role="alert">Off could not be saved. Statistics are off for this session only. Clear app data before restarting or sharing this device.</p>' : ''}${!telemetry.available() ? '<p>Statistics storage is unavailable. Delivery is disabled; an Off selection may not survive restart. Clear app data before sharing this device.</p>' : ''}`;
 }
 // No network/storage operation is awaited by gameplay or its render loop.
 if (build) {
@@ -28,7 +25,7 @@ if (build) {
     // A beta-configured web bundle must still stay off inside a public Android package.
     void App.getInfo().then(info => {
       nativeAllowed = info.id === 'com.wilderguard.game.beta';
-      if (nativeAllowed) flush(); else telemetry.setChoice('off');
-    }).catch(() => { telemetry.setChoice('off'); });
+      if (nativeAllowed) flush(); else telemetry.setEnabled(false);
+    }).catch(() => { nativeAllowed = false; telemetry.setEnabled(false); });
   }
 }

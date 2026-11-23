@@ -15,7 +15,11 @@ async function fixture(body: string, status = 200) {
   const directory = mkdtempSync(join(tmpdir(), 'wilderguard-whois-')); directories.push(directory);
   const socketPath = join(directory, 'localapi.sock');
   const paths: string[] = [];
-  const server = createServer((request, response) => { paths.push(request.url!); response.writeHead(status); response.end(body); }); servers.push(server);
+  const server = createServer((request, response) => {
+    paths.push(request.url!);
+    if (request.headers.host !== 'local-tailscaled.sock') { response.writeHead(403); response.end('invalid localapi request'); return; }
+    response.writeHead(status); response.end(body);
+  }); servers.push(server);
   await new Promise<void>(resolve => server.listen(socketPath, resolve));
   return { lookup: createTailscaleNodeLookup({ socketPath }), paths };
 }

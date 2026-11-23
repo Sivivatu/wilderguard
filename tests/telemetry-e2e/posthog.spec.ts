@@ -45,7 +45,7 @@ test('one On control sends the same anonymous start and outcome to both provider
   await expect(page.getByRole('combobox', { name: 'Gameplay statistics' })).toHaveCount(0);
   await expect(page.getByRole('dialog')).toContainText('both PostHog and GameAnalytics');
   await expect(page.getByRole('dialog')).toContainText('network address');
-  await expect(page.locator('#toggle-error-reporting')).toBeVisible();
+  await expect(page.getByRole('dialog')).toContainText('Automatic error reporting is not configured in this build.');
   expect(posthog).toEqual([]); expect(gameanalytics).toEqual([]);
   await page.getByRole('button', { name: 'Close dialog', exact: true }).click();
   await setStatistics(page, true); await buildArcher(page); await page.locator('#start-wave').click();

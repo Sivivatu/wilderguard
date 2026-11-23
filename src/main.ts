@@ -1,6 +1,5 @@
 import { App } from '@capacitor/app';
 import { gameplayTelemetry, telemetry, telemetrySettings } from './telemetry';
-import type { ProviderChoice } from './telemetry-contract';
 import { Capacitor } from '@capacitor/core';
 import { createIcons, Shield, Gem, Heart, ChevronRight, ChevronDown, ArrowRight, Map, Swords, BookOpen, Settings, Volume2, VolumeX, Play, Pause, FastForward, Flag, LockKeyhole, Check, Sparkles, Snowflake, Flame, Plus, X, Leaf, Target, Crosshair, RotateCcw, CircleHelp, Maximize, Trophy, ArrowUp, Trash2, Mountain, TreePine, Castle, Sun, Crown } from 'lucide';
 import { advanceRegion, buildTower, createGame, MAX_TOWER_LEVEL, REGIONS, repairCost, repairTower, sellTower, SLOTS, startWave, tickGame, TOWER_TYPES, upgradeCost, upgradeTower, useSpell, type GameState, type Spell, type TowerType } from './game';
@@ -298,9 +297,10 @@ function showDialog(type: string) {
       if (dialog.open && reportingToggle.isConnected) showDialog('settings');
     });
   });
-  get('gameplay-provider')?.addEventListener('change', event => {
-    const value = (event.target as HTMLSelectElement).value;
-    if (['off', 'posthog', 'gameanalytics'].includes(value)) telemetry.setChoice(value as ProviderChoice);
+  const statisticsToggle = document.querySelector<HTMLButtonElement>('#toggle-gameplay-statistics');
+  statisticsToggle?.addEventListener('click', () => {
+    if (statisticsToggle.disabled) return;
+    telemetry.setEnabled(telemetry.preference() !== 'on');
     showDialog('settings');
   });
   get('toggle-sound')?.addEventListener('click', () => { soundEnabled = !soundEnabled; if (soundEnabled) playSound('build'); showDialog('settings'); });

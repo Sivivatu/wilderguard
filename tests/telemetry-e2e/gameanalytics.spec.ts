@@ -49,7 +49,8 @@ for (const failing of ['posthog', 'gameanalytics'] as const) {
     recovered = true; await page.evaluate(() => window.dispatchEvent(new Event('online')));
     await expect.poll(async () => (await queue(page)).length).toBe(0);
     expect(requests[healthy]).toHaveLength(1);
-    expect(requests[failing].map(body => transmittedId(body, failing))).toEqual(expect.arrayContaining([id, id]));
+    expect(requests[failing].length).toBeGreaterThanOrEqual(2);
+    expect(requests[failing].every(body => transmittedId(body, failing) === id)).toBe(true);
     expect(await page.evaluate(() => JSON.parse(localStorage.getItem('wilderguard-campaign-v1')!).diamonds)).toBe(50);
   });
 }

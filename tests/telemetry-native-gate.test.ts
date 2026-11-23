@@ -16,6 +16,17 @@ beforeEach(() => {
 });
 afterEach(() => { vi.unstubAllEnvs(); vi.unstubAllGlobals(); vi.useRealTimers(); });
 describe('actual native package gate', () => {
+  async function restartWithPendingConsent() {
+    mocks.getInfo.mockResolvedValueOnce({ id: 'com.wilderguard.game.beta' });
+    const { telemetry } = await import('../src/telemetry'); await Promise.resolve();
+    telemetry.setEnabled(true); telemetry.record({ ...startEvent, at: Date.now() });
+    expect(JSON.parse(localStorage.getItem('wilderguard-telemetry-outbox-v2')!).entries).toHaveLength(1);
+    vi.resetModules();
+    let resolve!: (value: { id: string }) => void;
+    mocks.getInfo.mockImplementationOnce(() => new Promise(result => { resolve = result; }));
+    const restarted = await import('../src/telemetry');
+    return { telemetry: restarted.telemetry, resolve };
+  }
   it('keeps both providers off in the public Android package', async () => {
     mocks.getInfo.mockResolvedValue({ id: 'com.wilderguard.game' });
     const { telemetry } = await import('../src/telemetry');
@@ -40,6 +51,25 @@ describe('actual native package gate', () => {
     mocks.getInfo.mockRejectedValue(new Error('bridge unavailable'));
     const { telemetry } = await import('../src/telemetry'); await Promise.resolve();
     telemetry.setEnabled(true); await telemetry.flush(); expect(telemetry.enabled()).toBe(false);
+    expect(mocks.posthog).not.toHaveBeenCalled(); expect(mocks.gameanalytics).not.toHaveBeenCalled();
+  });
+  it('preserves beta consent and both pending deliveries while checking identity after restart', async () => {
+    const { telemetry, resolve } = await restartWithPendingConsent();
+    expect(telemetry.configured()).toBe(false); expect(telemetry.enabled()).toBe(false);
+    expect(JSON.parse(localStorage.getItem('wilderguard-telemetry-choice-v2')!).preference).toBe('on');
+    expect(JSON.parse(localStorage.getItem('wilderguard-telemetry-outbox-v2')!).entries[0].pending).toEqual(['posthog', 'gameanalytics']);
+    expect(mocks.posthog).not.toHaveBeenCalled(); expect(mocks.gameanalytics).not.toHaveBeenCalled();
+    resolve({ id: 'com.wilderguard.game.beta' }); await vi.advanceTimersByTimeAsync(0);
+    expect(telemetry.enabled()).toBe(true); expect(telemetry.preference()).toBe('on');
+    expect(mocks.posthog).toHaveBeenCalledTimes(1); expect(mocks.gameanalytics).toHaveBeenCalledTimes(1);
+    expect(JSON.parse(localStorage.getItem('wilderguard-telemetry-outbox-v2')!).entries).toEqual([]);
+  });
+  it('purges restored dual consent and queued data after a public package is identified', async () => {
+    const { telemetry, resolve } = await restartWithPendingConsent();
+    resolve({ id: 'com.wilderguard.game' }); await vi.advanceTimersByTimeAsync(0);
+    expect(telemetry.enabled()).toBe(false); expect(telemetry.preference()).toBe('off');
+    expect(JSON.parse(localStorage.getItem('wilderguard-telemetry-outbox-v2')!).entries).toEqual([]);
+    expect(JSON.parse(localStorage.getItem('wilderguard-telemetry-choice-v2')!).preference).toBe('off');
     expect(mocks.posthog).not.toHaveBeenCalled(); expect(mocks.gameanalytics).not.toHaveBeenCalled();
   });
 });

@@ -99,4 +99,27 @@ describe('bounded dual-provider outbox', () => {
     const unreadable = createTelemetryOutbox({ storage: { ...f.storage, getItem() { throw Error('blocked'); } }, scope: 'both-projects', send: f.send });
     expect(unreadable.available()).toBe(false);
   });
+  it('times out an uncooperative adapter without delaying healthy-provider progress', async () => {
+    vi.useFakeTimers();
+    try {
+      const f = fixture(); const signals: AbortSignal[] = [];
+      f.send.mockImplementation((provider, _event, signal) => {
+        signals.push(signal); return provider === 'posthog' ? new Promise(() => {}) : Promise.resolve('sent');
+      });
+      const q = f.make(); q.record(startEvent); const pending = q.flush();
+      await vi.advanceTimersByTimeAsync(8_000); await pending;
+      expect(q.size()).toBe(1); expect(signals.some(signal => signal.aborted)).toBe(true);
+      expect(JSON.parse(f.data.get(KEY)!).entries).toEqual([{ event: startEvent, pending: ['posthog'] }]);
+    } finally { vi.useRealTimers(); }
+  });
+  it('finishes a purge even when both adapters ignore their abort signal', async () => {
+    const f = fixture(); f.send.mockImplementation(() => new Promise(() => {}));
+    const q = f.make(); q.record(startEvent); const pending = q.flush();
+    await vi.waitFor(() => expect(f.send).toHaveBeenCalledTimes(2)); q.purge(); await pending;
+    expect(q.size()).toBe(0); expect(f.make().size()).toBe(0);
+  });
+  it('rejects oversized queue envelopes even when the scope alone exceeds the storage cap', () => {
+    const f = fixture(); const q = f.make('x'.repeat(128_001));
+    expect(q.available()).toBe(false); expect(f.data.has(KEY)).toBe(false);
+  });
 });
