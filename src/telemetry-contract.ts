@@ -25,10 +25,11 @@ export const telemetryEventSchema = z.discriminatedUnion('kind', [
   }),
 ]);
 export type TelemetryEvent = z.infer<typeof telemetryEventSchema>;
-export type ProviderChoice = 'off' | 'posthog' | 'gameanalytics';
+export type TelemetryProvider = 'posthog' | 'gameanalytics';
+export type TelemetryPreference = 'off' | 'on';
 export type SendResult = 'sent' | 'retry' | 'drop';
 export interface TelemetryAdapter {
-  choice: Exclude<ProviderChoice, 'off'>;
+  choice: TelemetryProvider;
   /** Includes provider, endpoint, project and credential epoch. Never a player identity. */
   scope: string;
   send(event: TelemetryEvent, signal: AbortSignal): Promise<SendResult>;

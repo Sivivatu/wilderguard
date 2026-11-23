@@ -1,91 +1,82 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Route } from '@playwright/test';
 
-const posthogEndpoint = 'https://eu.i.posthog.com/i/v0/e/';
-const gameAnalyticsEndpoint = 'https://private.example.test/telemetry';
+const corsHeaders = { 'Access-Control-Allow-Origin': 'http://127.0.0.1:4175', 'Access-Control-Allow-Methods': 'POST, OPTIONS', 'Access-Control-Allow-Headers': 'Content-Type, X-Telemetry-Epoch' };
+async function preflight(route: Route): Promise<boolean> {
+  if (route.request().method() !== 'OPTIONS') return false;
+  await route.fulfill({ status: 204, headers: corsHeaders });
+  return true;
+}
 
-async function buildArcher(page: import('@playwright/test').Page) {
-  const canvas = page.locator('#game-canvas');
-  const box = (await canvas.boundingBox())!;
+const endpoints = { posthog: 'https://eu.i.posthog.com/i/v0/e/', gameanalytics: 'https://private.example.test/telemetry' };
+type Provider = keyof typeof endpoints;
+async function startPausedWave(page: import('@playwright/test').Page) {
+  await page.getByRole('button', { name: 'Settings', exact: true }).click();
+  const toggle = page.getByRole('switch', { name: 'Gameplay statistics', exact: true });
+  await expect(toggle).toHaveAttribute('aria-checked', 'false'); await toggle.click();
+  await expect(toggle).toHaveAttribute('aria-checked', 'true');
+  await page.getByRole('button', { name: 'Close dialog', exact: true }).click();
+  const canvas = page.locator('#game-canvas'); const box = (await canvas.boundingBox())!;
   await canvas.click({ position: { x: box.width * 305 / 1100, y: box.height * 275 / 600 } });
-  await page.getByRole('button', { name: 'Confirm purchase' }).click();
+  await page.getByRole('button', { name: 'Confirm purchase' }).click(); await page.locator('#start-wave').click();
+  await page.getByRole('button', { name: 'Pause game' }).click();
+}
+const queue = (page: import('@playwright/test').Page) => page.evaluate(() => JSON.parse(localStorage.getItem('wilderguard-telemetry-outbox-v2')!).entries);
+
+for (const failing of ['posthog', 'gameanalytics'] as const) {
+  test(`${failing} retries after reload without resending the other provider's acknowledgement`, async ({ page }) => {
+    const healthy: Provider = failing === 'posthog' ? 'gameanalytics' : 'posthog';
+    let recovered = false;
+    const requests: Record<Provider, string[]> = { posthog: [], gameanalytics: [] };
+    for (const provider of ['posthog', 'gameanalytics'] as const) {
+      await page.route(endpoints[provider], async route => {
+    if (await preflight(route)) return;
+        requests[provider].push(route.request().postData()!);
+        await route.fulfill({ status: provider === failing && !recovered ? 503 : 200, contentType: 'application/json', headers: corsHeaders, body: '{}' });
+      });
+    }
+    await page.goto('/'); await startPausedWave(page);
+    await page.evaluate(() => window.dispatchEvent(new Event('online')));
+    await expect.poll(() => requests[healthy].length).toBe(1); await expect.poll(() => requests[failing].length).toBeGreaterThan(0);
+    await expect.poll(async () => (await queue(page))[0]?.pending).toEqual([failing]);
+    const [queued] = await queue(page); const id = queued.event.id;
+    const transmittedId = (body: string, provider: Provider) => provider === 'posthog' ? JSON.parse(body).uuid : JSON.parse(body).id;
+    expect(transmittedId(requests[healthy][0], healthy)).toBe(id);
+    expect(transmittedId(requests[failing][0], failing)).toBe(id);
+    await page.reload();
+    await page.getByRole('button', { name: 'Settings', exact: true }).click();
+    await expect(page.getByRole('switch', { name: 'Gameplay statistics', exact: true })).toHaveAttribute('aria-checked', 'true');
+    expect((await queue(page))[0].event.id).toBe(id);
+    recovered = true; await page.evaluate(() => window.dispatchEvent(new Event('online')));
+    await expect.poll(async () => (await queue(page)).length).toBe(0);
+    expect(requests[healthy]).toHaveLength(1);
+    expect(requests[failing].length).toBeGreaterThanOrEqual(2);
+    expect(requests[failing].every(body => transmittedId(body, failing) === id)).toBe(true);
+    expect(await page.evaluate(() => JSON.parse(localStorage.getItem('wilderguard-campaign-v1')!).diamonds)).toBe(50);
+  });
 }
 
-async function selectProvider(page: import('@playwright/test').Page, provider: 'off' | 'gameanalytics' | 'posthog') {
-  await page.getByRole('button', { name: 'Settings', exact: true }).click();
-  const selection = page.getByRole('combobox', { name: 'Gameplay statistics' });
-  await selection.selectOption(provider);
-  await expect(selection).toHaveValue(provider);
-  await page.getByRole('button', { name: 'Close dialog', exact: true }).click();
-}
-
-test('GameAnalytics summary stays secret-free and switching provider purges its queue', async ({ page }) => {
-  test.setTimeout(60000);
-  let relayOnline = true;
-  const gameAnalyticsRequests: Array<{ body: string; headers: Record<string, string> }> = [];
-  const posthogRequests: string[] = [];
-  await page.route(gameAnalyticsEndpoint, async route => {
-    gameAnalyticsRequests.push({ body: route.request().postData() ?? '', headers: await route.request().allHeaders() });
-    if (!relayOnline) { await route.abort('internetdisconnected'); return; }
-    await route.fulfill({ status: 200, contentType: 'application/json', body: '{"status":"ok"}' });
-  });
-  await page.route(posthogEndpoint, async route => {
-    posthogRequests.push(route.request().postData() ?? '');
-    await route.fulfill({ status: 200, contentType: 'application/json', body: '{"status":"ok"}' });
-  });
-
-  await page.goto('/');
-  await page.getByRole('button', { name: 'Settings', exact: true }).click();
-  await expect(page.getByRole('combobox', { name: 'Gameplay statistics' })).toHaveValue('off');
-  expect(gameAnalyticsRequests).toEqual([]);
-  expect(posthogRequests).toEqual([]);
-  await page.locator('#gameplay-provider').selectOption('gameanalytics');
-  await expect(page.locator('#gameplay-provider')).toHaveValue('gameanalytics');
-  await page.getByRole('button', { name: 'Close dialog', exact: true }).click();
-
-  await buildArcher(page);
-  await page.locator('#start-wave').click();
+test('Off purges both pending destinations, cancels delivery, and persists across reload', async ({ page }) => {
+  const requests: Record<Provider, string[]> = { posthog: [], gameanalytics: [] };
+  for (const provider of ['posthog', 'gameanalytics'] as const) {
+    await page.route(endpoints[provider], async route => {
+    if (await preflight(route)) return;
+      requests[provider].push(route.request().postData()!);
+      await route.fulfill({ status: 503, contentType: 'application/json', headers: corsHeaders, body: '{}' });
+    });
+  }
+  await page.goto('/'); await startPausedWave(page);
   await page.evaluate(() => window.dispatchEvent(new Event('online')));
-  await expect.poll(() => gameAnalyticsRequests.length).toBeGreaterThan(0);
-  const gameAnalyticsStart = JSON.parse(gameAnalyticsRequests[0].body);
-  expect(gameAnalyticsStart).toMatchObject({ kind: 'wave_start', context: 'fresh', archer1: 1 });
-  expect(gameAnalyticsRequests[0].headers['x-telemetry-epoch']).toBe('family-1');
-  expect(gameAnalyticsRequests[0].headers.authorization).toBeUndefined();
-  expect(gameAnalyticsRequests[0].body).not.toMatch(/secret|game_key|game_secret|hmac/i);
-  expect(posthogRequests).toEqual([]);
-  await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('wilderguard-telemetry-outbox-v1')!).events.length)).toBe(0);
-  relayOnline = false;
-
-  await expect(page.locator('#start-wave')).toBeEnabled({ timeout: 45000 });
-  await page.evaluate(() => window.dispatchEvent(new Event('online')));
-  await expect.poll(() => gameAnalyticsRequests.length).toBeGreaterThan(1);
-  const gameAnalyticsTerminal = JSON.parse(gameAnalyticsRequests[gameAnalyticsRequests.length - 1].body);
-  expect(gameAnalyticsTerminal).toMatchObject({ kind: 'wave_end', outcome: expect.stringMatching(/clear|defeat/) });
-  expect(gameAnalyticsTerminal.attemptId).toBe(gameAnalyticsStart.attemptId);
-  expect(gameAnalyticsTerminal.activeMs).toBeGreaterThan(0);
-
-  const queuedGA = await page.evaluate(() => JSON.parse(localStorage.getItem('wilderguard-telemetry-outbox-v1')!).events);
-  expect(queuedGA.map((event: { kind: string }) => event.kind)).toEqual(['wave_end']);
-  expect(gameAnalyticsRequests[gameAnalyticsRequests.length - 1].headers['x-telemetry-epoch']).toBe('family-1');
-  await selectProvider(page, 'posthog');
-  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('wilderguard-telemetry-outbox-v1')!).events)).toEqual([]);
-  expect(posthogRequests).toEqual([]);
-  const gaCountAfterSwitch = gameAnalyticsRequests.length;
-
+  await expect.poll(() => requests.posthog.length).toBeGreaterThan(0); await expect.poll(() => requests.gameanalytics.length).toBeGreaterThan(0);
+  await expect.poll(async () => (await queue(page))[0]?.pending.length).toBe(2);
   await page.getByRole('button', { name: 'Settings', exact: true }).click();
-  await page.getByRole('button', { name: 'Start a new adventure' }).click();
-  await page.getByRole('button', { name: 'Start from the beginning' }).click();
-  await buildArcher(page);
-  await page.locator('#start-wave').click();
-  await page.evaluate(() => window.dispatchEvent(new Event('online')));
-  await expect.poll(() => posthogRequests.length).toBe(1);
-  const posthogStart = JSON.parse(posthogRequests[0]);
-  expect(posthogStart.event).toBe('wilderguard_wave_start_v1');
-  expect(posthogStart.properties).toMatchObject({ kind: 'wave_start', $process_person_profile: false, $geoip_disable: true });
-  expect(gameAnalyticsRequests).toHaveLength(gaCountAfterSwitch);
-
-  await selectProvider(page, 'off');
-  const postCountAtOptOut = posthogRequests.length;
-  await page.waitForTimeout(250);
-  expect(posthogRequests).toHaveLength(postCountAtOptOut);
-  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('wilderguard-telemetry-outbox-v1')!).events)).toEqual([]);
+  await page.getByRole('switch', { name: 'Gameplay statistics', exact: true }).click();
+  await expect(page.getByRole('switch', { name: 'Gameplay statistics', exact: true })).toHaveAttribute('aria-checked', 'false');
+  expect(await queue(page)).toEqual([]);
+  const counts = { posthog: requests.posthog.length, gameanalytics: requests.gameanalytics.length };
+  await page.evaluate(() => window.dispatchEvent(new Event('online'))); await page.reload();
+  await page.getByRole('button', { name: 'Settings', exact: true }).click();
+  await expect(page.getByRole('switch', { name: 'Gameplay statistics', exact: true })).toHaveAttribute('aria-checked', 'false');
+  await page.evaluate(() => window.dispatchEvent(new Event('online'))); await page.waitForTimeout(250);
+  expect(await queue(page)).toEqual([]);
+  expect(requests.posthog).toHaveLength(counts.posthog); expect(requests.gameanalytics).toHaveLength(counts.gameanalytics);
 });

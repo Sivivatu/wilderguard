@@ -12,7 +12,7 @@ export function createGameAnalyticsAdapter(env: Record<string, unknown>, fetcher
       const response = await fetcher(endpoint.href, { method: 'POST', credentials: 'omit', referrerPolicy: 'no-referrer', redirect: 'error', cache: 'no-store', signal,
         headers: { 'Content-Type': 'application/json', 'X-Telemetry-Epoch': epoch.data }, body: JSON.stringify(parsed.data) });
       if (response.ok) return 'sent';
-      return response.status === 408 || response.status === 429 || response.status >= 500 ? 'retry' : 'drop';
+      return [401, 403, 408, 429].includes(response.status) || response.status >= 500 ? 'retry' : 'drop';
     },
   };
 }

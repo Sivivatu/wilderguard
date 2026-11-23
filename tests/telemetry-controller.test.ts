@@ -1,57 +1,123 @@
 import { describe, expect, it, vi } from 'vitest';
 import { createTelemetryController } from '../src/telemetry-controller';
-import { telemetryAdapters } from '../src/telemetry-adapters';
 import { startEvent } from './telemetry-fixture';
 import type { TelemetryAdapter } from '../src/telemetry-contract';
-function fixture(build: string | null = 'beta-test') {
+function fixture() {
   const data = new Map<string, string>();
-  const storage = { getItem: (k: string) => data.get(k) ?? null, setItem: (k: string, v: string) => { data.set(k, v); } };
-  const posthog = { choice: 'posthog', scope: 'posthog:a', send: vi.fn(async () => 'sent') } as TelemetryAdapter;
-  const ga = { choice: 'gameanalytics', scope: 'ga:a', send: vi.fn(async () => 'sent') } as TelemetryAdapter;
+  const storage = { getItem: (key: string) => data.get(key) ?? null,
+    setItem(key: string, value: string) { data.set(key, value); }, removeItem(key: string) { data.delete(key); } };
+  const posthog: TelemetryAdapter = { choice: 'posthog', scope: 'posthog:a', send: vi.fn(async () => 'sent' as const) };
+  const ga: TelemetryAdapter = { choice: 'gameanalytics', scope: 'ga:a', send: vi.fn(async () => 'sent' as const) };
   const changed = vi.fn();
-  const make = (adapters = [posthog, ga]) => createTelemetryController({ build, storage, adapters, onChange: changed });
-  return { make, storage, posthog, ga, changed };
+  const make = (adapters = [posthog, ga], build: string | null = 'beta-test') => createTelemetryController({ build, storage, adapters, onChange: changed });
+  return { data, make, storage, posthog, ga, changed };
 }
-describe('exclusive telemetry controller', () => {
-  it('defaults off, persists consent, delivers only to selected adapter, and purges on switching', async () => {
-    const f = fixture(); const c = f.make(); c.record(startEvent); await c.flush(); expect(f.posthog.send).not.toHaveBeenCalled();
-    c.setChoice('posthog'); c.record({ ...startEvent, at: Date.now() });
-    const resumed = f.make(); expect(resumed.choice()).toBe('posthog'); await resumed.flush(); expect(f.posthog.send).toHaveBeenCalledTimes(1);
-    resumed.record({ ...startEvent, at: Date.now() }); resumed.setChoice('gameanalytics'); await resumed.flush();
-    expect(f.ga.send).not.toHaveBeenCalled(); resumed.record({ ...startEvent, at: Date.now() }); await resumed.flush(); expect(f.ga.send).toHaveBeenCalledTimes(1);
-    resumed.setChoice('off'); expect(f.changed).toHaveBeenCalledTimes(3); expect(resumed.enabled()).toBe(false);
-    expect(f.make([{ ...f.posthog, scope: 'posthog:b' }]).choice()).toBe('off');
+const event = () => ({ ...startEvent, at: Date.now() });
+describe('single On/Off dual-provider controller', () => {
+  it('defaults Off, sends to neither provider, and On delivers identical events to both', async () => {
+    const f = fixture(); const c = f.make();
+    expect(c.preference()).toBe('off'); expect(c.configured()).toBe(true);
+    c.record(event()); await c.flush(); expect(f.posthog.send).not.toHaveBeenCalled(); expect(f.ga.send).not.toHaveBeenCalled();
+    c.setEnabled(true); expect(c.preference()).toBe('on'); expect(c.enabled()).toBe(true);
+    const value = event(); c.record(value); await c.flush();
+    expect(f.posthog.send).toHaveBeenCalledExactlyOnceWith(value, expect.any(AbortSignal));
+    expect(f.ga.send).toHaveBeenCalledExactlyOnceWith(value, expect.any(AbortSignal));
+    expect(f.changed).toHaveBeenCalledTimes(1);
   });
-  it('public, unconfigured, corrupt and storage-blocked cases fail closed', async () => {
-    const publicBuild = fixture(null); const c = publicBuild.make(); c.setChoice('posthog'); c.record(startEvent); await c.flush(); expect(c.choice()).toBe('off');
-    expect(c.configured('posthog')).toBe(false); expect(telemetryAdapters({})).toEqual([]);
-    const broken = createTelemetryController({ build: 'beta-test', storage: { getItem: () => 'bad', setItem() { throw Error(); } }, adapters: [publicBuild.posthog] });
-    broken.setChoice('posthog'); expect(broken.available()).toBe(false); expect(broken.enabled()).toBe(false); await broken.flush();
-    const unknown = fixture().make([]); unknown.setChoice('gameanalytics'); expect(unknown.choice()).toBe('off');
+  it('restores On and queued events under canonical provider order', async () => {
+    const f = fixture(); const c = f.make(); c.setEnabled(true); const value = event(); c.record(value);
+    const resumed = f.make([f.ga, f.posthog]); expect(resumed.preference()).toBe('on'); await resumed.flush();
+    expect(f.ga.send).toHaveBeenCalledExactlyOnceWith(value, expect.any(AbortSignal));
+    expect(f.posthog.send).toHaveBeenCalledExactlyOnceWith(value, expect.any(AbortSignal));
   });
-});
-
-describe('durable revocation', () => {
-  it('removes old consent and queue if quota blocks writes during opt-out', async () => {
-    const data = new Map<string, string>(); let quota = false;
-    const storage = { getItem: (key: string) => data.get(key) ?? null,
-      setItem(key: string, value: string) { if (quota) throw Error('quota'); data.set(key, value); }, removeItem(key: string) { data.delete(key); } };
-    const send = vi.fn(async () => 'sent' as const);
-    const options = { build: 'beta-test', storage, adapters: [{ choice: 'posthog' as const, scope: 'a', send }] };
-    const c = createTelemetryController(options); c.setChoice('posthog'); c.record({ ...startEvent, at: Date.now() });
-    quota = true; c.setChoice('off'); quota = false;
-    const restarted = createTelemetryController(options); await restarted.flush();
-    expect(restarted.choice()).toBe('off'); expect(send).not.toHaveBeenCalled();
-    expect(JSON.parse(data.get('wilderguard-telemetry-outbox-v1')!).events).toEqual([]);
+  it.each(['posthog', 'gameanalytics', 'build'])('invalidates consent and old queue after %s changes', async change => {
+    const f = fixture(); const c = f.make(); c.setEnabled(true); c.record(event());
+    const adapters = [change === 'posthog' ? { ...f.posthog, scope: 'posthog:b' } : f.posthog,
+      change === 'gameanalytics' ? { ...f.ga, scope: 'ga:b' } : f.ga];
+    const changed = f.make(adapters, change === 'build' ? 'beta-next' : 'beta-test');
+    expect(changed.preference()).toBe('off'); await changed.flush();
+    const previous = f.make(); expect(previous.preference()).toBe('off'); previous.setEnabled(true); await previous.flush();
+    expect(f.posthog.send).not.toHaveBeenCalled(); expect(f.ga.send).not.toHaveBeenCalled();
   });
-});
-
-describe('native release gate', () => {
-  it('cannot enable collection or send until the native beta identity is verified', async () => {
-    let allowed = false; const f = fixture();
-    const c = createTelemetryController({ build: 'beta-test', storage: f.storage, adapters: [f.posthog], allowed: () => allowed });
-    c.setChoice('posthog'); c.record({ ...startEvent, at: Date.now() }); await c.flush(); expect(c.enabled()).toBe(false);
-    expect(c.configured('posthog')).toBe(false); expect(f.posthog.send).not.toHaveBeenCalled();
-    allowed = true; c.setChoice('posthog'); c.record({ ...startEvent, at: Date.now() }); await c.flush(); expect(f.posthog.send).toHaveBeenCalledTimes(1);
+  it('requires exactly one adapter for each provider', async () => {
+    const f = fixture();
+    for (const adapters of [[], [f.posthog], [f.ga], [f.posthog, f.posthog, f.ga], [f.posthog, f.ga, f.ga]]) {
+      const c = f.make(adapters); expect(c.configured()).toBe(false); c.setEnabled(true);
+      expect(c.preference()).toBe('off'); expect(c.enabled()).toBe(false); c.record(event()); await c.flush();
+    }
+    expect(f.posthog.send).not.toHaveBeenCalled(); expect(f.ga.send).not.toHaveBeenCalled();
+  });
+  it('discards legacy provider consent and queued events without upgrading either to On', async () => {
+    const f = fixture();
+    f.storage.setItem('wilderguard-telemetry-choice-v1', JSON.stringify({ version: 1, scope: JSON.stringify(['posthog:a', 'ga:a']), choice: 'posthog' }));
+    f.storage.setItem('wilderguard-telemetry-outbox-v1', JSON.stringify({ scope: 'beta-test:posthog:a', events: [event()] }));
+    const c = f.make(); expect(c.preference()).toBe('off');
+    expect(f.data.has('wilderguard-telemetry-choice-v1')).toBe(false); expect(f.data.has('wilderguard-telemetry-outbox-v1')).toBe(false);
+    c.setEnabled(true); await c.flush(); expect(f.posthog.send).not.toHaveBeenCalled(); expect(f.ga.send).not.toHaveBeenCalled();
+  });
+  it('Off cancels both sends, clears pending data, and survives restart', async () => {
+    const f = fixture(); const signals: AbortSignal[] = [];
+    for (const adapter of [f.posthog, f.ga]) vi.mocked(adapter.send).mockImplementation((_event, signal) => new Promise(resolve => {
+      signals.push(signal); signal.addEventListener('abort', () => resolve('retry'));
+    }));
+    const c = f.make(); c.setEnabled(true); c.record(event()); c.record({ ...event(), id: crypto.randomUUID() });
+    const pending = c.flush(); await vi.waitFor(() => expect(signals).toHaveLength(2)); c.setEnabled(false); await pending;
+    expect(signals.every(signal => signal.aborted)).toBe(true); expect(c.preference()).toBe('off');
+    const resumed = f.make(); expect(resumed.preference()).toBe('off'); resumed.setEnabled(true); await resumed.flush();
+    expect(f.posthog.send).toHaveBeenCalledTimes(1); expect(f.ga.send).toHaveBeenCalledTimes(1);
+  });
+  it('revokes durably when quota blocks writes and exposes storage failure', async () => {
+    const f = fixture(); let quota = false;
+    const storage = { ...f.storage, setItem(key: string, value: string) { if (quota) throw Error('quota'); f.storage.setItem(key, value); } };
+    const c = createTelemetryController({ build: 'beta-test', storage, adapters: [f.posthog, f.ga] });
+    c.setEnabled(true); c.record(event()); quota = true; c.setEnabled(false);
+    expect(c.enabled()).toBe(false); expect(c.available()).toBe(false); quota = false;
+    const resumed = f.make(); expect(resumed.preference()).toBe('off'); resumed.setEnabled(true); await resumed.flush();
+    expect(f.posthog.send).not.toHaveBeenCalled(); expect(f.ga.send).not.toHaveBeenCalled();
+  });
+  it('reports a failed On preference write and never sends', async () => {
+    const f = fixture(); const storage = { ...f.storage, setItem(key: string, value: string) {
+      if (key.includes('choice-v2') && JSON.parse(value).preference === 'on') throw Error('quota'); f.storage.setItem(key, value);
+    } };
+    const c = createTelemetryController({ build: 'beta-test', storage, adapters: [f.posthog, f.ga] });
+    c.setEnabled(true); expect(c.preferenceSaved()).toBe(false); expect(c.enabled()).toBe(false);
+    c.record(event()); await c.flush(); expect(f.posthog.send).not.toHaveBeenCalled(); expect(f.ga.send).not.toHaveBeenCalled();
+  });
+  it('keeps public builds and unverified native identity Off', async () => {
+    const f = fixture(); const publicBuild = f.make([f.posthog, f.ga], null);
+    publicBuild.setEnabled(true); expect(publicBuild.configured()).toBe(false); expect(publicBuild.preference()).toBe('off');
+    publicBuild.record(event()); await publicBuild.flush();
+    let allowed = false;
+    const native = createTelemetryController({ build: 'beta-test', storage: f.storage, adapters: [f.posthog, f.ga], allowed: () => allowed });
+    native.setEnabled(true); expect(native.configured()).toBe(false); expect(native.enabled()).toBe(false); native.record(event()); await native.flush();
+    expect(f.posthog.send).not.toHaveBeenCalled(); expect(f.ga.send).not.toHaveBeenCalled();
+    allowed = true; native.setEnabled(true); native.record(event()); await native.flush();
+    expect(f.posthog.send).toHaveBeenCalledTimes(1); expect(f.ga.send).toHaveBeenCalledTimes(1);
+  });
+  it('preserves prior beta consent and queue while native verification is pending', async () => {
+    const f = fixture(); const original = f.make(); original.setEnabled(true); const value = event(); original.record(value);
+    let allowed = false;
+    const restarted = createTelemetryController({ build: 'beta-test', storage: f.storage, adapters: [f.ga, f.posthog], allowed: () => allowed });
+    expect(restarted.preference()).toBe('on'); expect(restarted.configured()).toBe(false); expect(restarted.enabled()).toBe(false);
+    await restarted.flush(); expect(f.posthog.send).not.toHaveBeenCalled(); expect(f.ga.send).not.toHaveBeenCalled();
+    allowed = true; expect(restarted.enabled()).toBe(true); await restarted.flush();
+    expect(f.posthog.send).toHaveBeenCalledExactlyOnceWith(value, expect.any(AbortSignal));
+    expect(f.ga.send).toHaveBeenCalledExactlyOnceWith(value, expect.any(AbortSignal));
+  });
+  it('purges a restored native queue when verification explicitly denies the build', async () => {
+    const f = fixture(); const original = f.make(); original.setEnabled(true); original.record(event());
+    let allowed = false;
+    const denied = createTelemetryController({ build: 'beta-test', storage: f.storage, adapters: [f.posthog, f.ga], allowed: () => allowed });
+    denied.setEnabled(false); allowed = true; denied.setEnabled(true); await denied.flush();
+    expect(f.posthog.send).not.toHaveBeenCalled(); expect(f.ga.send).not.toHaveBeenCalled();
+  });
+  it('revokes persisted On when a record fails to persist, preventing restart delivery', async () => {
+    const f = fixture(); let quota = false;
+    const storage = { ...f.storage, setItem(key: string, value: string) { if (quota) throw Error('quota'); f.storage.setItem(key, value); } };
+    const c = createTelemetryController({ build: 'beta-test', storage, adapters: [f.posthog, f.ga] });
+    c.setEnabled(true); c.record(event()); quota = true; c.record({ ...event(), id: crypto.randomUUID() }); quota = false;
+    expect(f.make().preference()).toBe('off');
+    const resumed = f.make(); resumed.setEnabled(true); await resumed.flush();
+    expect(f.posthog.send).not.toHaveBeenCalled(); expect(f.ga.send).not.toHaveBeenCalled();
   });
 });
