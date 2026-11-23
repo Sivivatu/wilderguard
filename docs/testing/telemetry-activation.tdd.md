@@ -2,7 +2,7 @@
 
 This record distinguishes local transport tests from real service evidence. See the [activation guide](../telemetry-activation.md), [shared contract](../gameplay-telemetry.md), and [relay requirements](../../server/README.md).
 
-## Verified on 20 November 2026
+## Verified on 23 November 2026
 
 - PostHog EU project and dashboard are available.
 - Verified destinations: [PostHog project](https://eu.posthog.com/project/360532) and [dashboard](https://eu.posthog.com/project/360532/dashboard/1136395); configured beta web build: [private beta test site](https://remote-dev.emperor-quillback.ts.net:8444/).
@@ -11,15 +11,21 @@ This record distinguishes local transport tests from real service evidence. See 
 - Offline reload, reconnect, and delivery passed against a static local server.
 - The configured beta web build was served privately through Tailscale at `https://remote-dev.emperor-quillback.ts.net:8444/`.
 - The organization uses a paid PostHog account, while the organization-wide Product Analytics spending cap is $0. No billing changes were made.
-- GameAnalytics credentials were not obtained: credential requests timed out. The systemd unit is installed but inactive because protected `server.env` is absent. Therefore no owned GameAnalytics project ingestion, relay startup, or dashboard mapping is verified.
-- Installed unit: `/home/ubuntu/.config/systemd/user/wilderguard-relay.service`; expected protected config: `/home/ubuntu/.config/wilderguard-relay/server.env`; runtime: `/home/ubuntu/.local/share/wilderguard-relay/current`; state: `/home/ubuntu/.local/share/wilderguard-relay/state`.
-- A temporary synthetic-only environment verified systemd startup, authenticated loopback OPTIONS returning HTTP 200, and exclusive `flock` behavior (a second writer exited with status 1). The unit was stopped and the synthetic environment/database were removed; current state is inactive/disabled with no protected environment file. No provider credentials were used and no GA cloud traffic was generated.
-- Private Tailscale ingress was tested with a synthetic upstream: trusted loopback carrying the owner identity returned HTTP 200; a request through Tailscale HTTPS port 8443 forging that same identity returned HTTP 403. The temporary 8443 proxy and stub were removed after the check. This verifies the tested host's identity-header boundary, not an active GA relay or service ingestion.
+- The user confirmed the GameAnalytics game uses child-directed privacy settings and the free plan.
+- The user systemd unit `/home/ubuntu/.config/systemd/user/wilderguard-relay.service` is enabled and running. Its protected configuration is `/home/ubuntu/.config/wilderguard-relay/server.env` (keep its contents out of chats, logs, client artifacts and Git); runtime is `/home/ubuntu/.local/share/wilderguard-relay/current`; private SQLite state is `/home/ubuntu/.local/share/wilderguard-relay/state`.
+- Private Tailscale Serve exposes the relay at HTTPS `/telemetry` on port 8443. The beta site is separately served at [the private beta test site](https://remote-dev.emperor-quillback.ts.net:8444/).
+- Live Playwright validation used the configured local beta client, the real relay, and the real GameAnalytics `/events` upstream. Since the test server's Tailscale identity is tagged and not on the approved human tester allowlist, the harness intercepted the browser HTTPS request and forwarded it over trusted loopback with the approved test identity. Wave 1 start, a clear terminal, and wave 2 start held offline across browser reload and delivered after reconnection all returned HTTP 200. The terminal carried the expected archer count and `clear` outcome; initial Off and opt-out purge passed; GameAnalytics selection made zero PostHog requests.
+- After restarting the relay, replay of the first event returned a cached HTTP 200 acknowledgement without increasing physical event rows (21 before and after). A separate forged-identity HTTPS probe returned HTTP 403. This verifies the tested relay deduplication and ingress boundary; it does not prove exactly-once GameAnalytics processing or exercise human-device Tailnet authentication.
+- The test confirms real API acceptance through the relay, not appearance in the owned GameAnalytics dashboard. The project event explorer was not inspected.
+
+- Production HMAC `/init` authentication returned HTTP 200 with collection enabled and a valid server clock. Secure import stored server configuration with mode 0600; neither credential was printed or committed.
+- `npm run build` passed for build `local-20261123`. The immutable private web release is `e270c426f83b103e`; served HTML matches the tested build. Scans found neither GameAnalytics credential in built/deployed files, and no source maps or private-key formats. No executable source changed for credential activation; the earlier code-validation baseline remains applicable.
 
 ## Still unverified
 
 - Native Android delivery to either provider, including first launch without network, force-stop/restart while offline, and reconnect on the intended device.
-- GameAnalytics relay authentication against a real configured project, persistence behavior under host restart, and live project ingestion.
+- GameAnalytics event visibility in the owned project dashboard/event explorer.
+- A real human-device Tailnet authentication request to the private relay.
 - Account-level privacy and retention configuration beyond the explicitly observed PostHog event properties.
 - Delivery during app termination or device storage failure. These are best-effort paths; interrupted or missing events must remain unknown.
 
