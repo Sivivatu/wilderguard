@@ -16,6 +16,10 @@ concurrency:
 
 env:
   # Enabling reporting requires a reviewed change after native/device release gates.
+  VITE_GAMEPLAY_CHANNEL: ''
+  VITE_GAMEPLAY_BUILD: ''
+  VITE_POSTHOG_TOKEN: ''
+  VITE_GAMEANALYTICS_RELAY: ''
   VITE_SENTRY_DSN: ''
   VITE_SENTRY_ENVIRONMENT: ''
   VITE_SENTRY_RELEASE: ''

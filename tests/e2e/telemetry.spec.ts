@@ -1,0 +1,23 @@
+import { expect, test } from '@playwright/test';
+test('public build discloses optional statistics but stays off through play and reload', async ({ page }) => {
+  const analyticsRequests: string[] = [];
+  page.on('request', request => { if (/posthog|gameanalytics|telemetry/i.test(new URL(request.url()).hostname)) analyticsRequests.push(request.url()); });
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Settings', exact: true }).click();
+  await expect(page.getByText('Gameplay statistics are disabled in this build.')).toBeVisible();
+  const choice = page.getByRole('combobox', { name: 'Gameplay statistics' });
+  await expect(choice).toHaveValue('off');
+  await expect(choice.locator('option[value="posthog"]')).toHaveJSProperty('disabled', true);
+  await expect(choice.locator('option[value="gameanalytics"]')).toHaveJSProperty('disabled', true);
+  await expect(page.getByText(/Sent reports cannot be recalled/)).toBeVisible();
+  await page.getByRole('button', { name: 'Close dialog', exact: true }).click();
+  const canvas = page.locator('#game-canvas'); const box = (await canvas.boundingBox())!;
+  await canvas.click({ position: { x: box.width * 305 / 1100, y: box.height * 275 / 600 } });
+  await page.getByRole('button', { name: 'Confirm purchase' }).click();
+  await page.locator('#start-wave').click(); await expect(page.locator('#start-wave')).toBeDisabled();
+  await page.getByRole('button', { name: 'Pause game', exact: true }).click();
+  await page.reload(); await expect(page.locator('#diamond-count')).toHaveText('50');
+  expect(analyticsRequests).toEqual([]);
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('wilderguard-campaign-v1')!).diamonds)).toBe(50);
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('wilderguard-telemetry-outbox-v1')!).events)).toEqual([]);
+});
