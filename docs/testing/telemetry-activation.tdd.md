@@ -1,5 +1,8 @@
 # Telemetry activation verification evidence
 
+Historical activation evidence before dual-provider consent. See [current switch and ingress evidence](telemetry-switch-and-ingress.tdd.md) for the updated On/Off flow and actual private browser verification.
+
+
 This record distinguishes local transport tests from real service evidence. See the [activation guide](../telemetry-activation.md), [shared contract](../gameplay-telemetry.md), and [relay requirements](../../server/README.md).
 
 ## Verified on 23 November 2026
@@ -41,4 +44,4 @@ This record distinguishes local transport tests from real service evidence. See 
 
 ## Repeatable local checks
 
-`npm run test:telemetry` runs the synthetic fixture and intercepted browser journeys. It validates client behavior and does not contact or validate either provider account. For live validation, select one provider, accept disclosure, complete one wave, inspect the corresponding project for its start and terminal/mapped events, and compare the values with the run. Then repeat with connectivity disabled and restored, and verify stable IDs/timestamps and no cross-provider delivery. See the activation guide for the exact manual sequence and privacy checks.
+`npm run test:telemetry` runs the synthetic fixture and intercepted browser journeys. It validates client behavior and does not contact or validate either provider account. For current live validation, read the disclosure, turn Gameplay statistics On, complete one wave, inspect both configured projects for the start and terminal/mapped events, and compare the values with the run. Then repeat with connectivity disabled and restored, and verify stable IDs/timestamps and independent per-provider acknowledgement without resending already accepted events. See the activation guide for the exact manual sequence and privacy checks.

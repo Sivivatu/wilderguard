@@ -1,6 +1,6 @@
 # Private GameAnalytics relay
 
-The supported deployment is one private, long-running instance behind Tailscale Serve. See [activation](../docs/telemetry-activation.md) for current verification status; browser ingress and dual-provider delivery are pending re-verification. The client adapter never receives the GameAnalytics game secret. The runner was tested on Node 24.22.2, which executes these TypeScript files directly. Start the local runner with `node scripts/run-gameanalytics-relay.ts` only after protected server environment configuration is available. No keys or `.env` contents belong in Git, logs, client bundles, APKs or published artifacts.
+The supported deployment is one private, long-running instance behind Tailscale Serve. See [activation](../docs/telemetry-activation.md) for current verification status; browser ingress and dual-provider delivery have been verified on the approved tagged host; GameAnalytics dashboard visibility and native-device delivery remain unverified. The client adapter never receives the GameAnalytics game secret. The runner was tested on Node 24.22.2, which executes these TypeScript files directly. Start the local runner with `node scripts/run-gameanalytics-relay.ts` only after protected server environment configuration is available. No keys or `.env` contents belong in Git, logs, client bundles, APKs or published artifacts.
 
 Required **server-only** environment:
 
